@@ -7,8 +7,10 @@ import {
   Container,
   Button,
   Text,
-  Divider,
   Stack,
+  Group,
+  Divider,
+  ThemeIcon,
   Center,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
@@ -17,6 +19,7 @@ import { supabase } from '../lib/supabase'
 import { IconCar } from '@tabler/icons-react'
 
 export default function Auth() {
+  const [isRegister, setIsRegister] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,12 +29,28 @@ export default function Auth() {
     e.preventDefault()
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (error) throw error
-      navigate('/')
+      if (isRegister) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        })
+        if (error) throw error
+
+        notifications.show({
+          title: 'Başarılı',
+          message: 'Kayıt işlemi tamamlandı. Email adresinizi kontrol edin.',
+          color: 'green',
+        })
+        
+        setIsRegister(false)
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (error) throw error
+        navigate('/')
+      }
     } catch (error) {
       notifications.show({
         title: 'Hata',
@@ -46,7 +65,9 @@ export default function Auth() {
   return (
     <Container size={420} my={40}>
       <Center mb={40}>
-        <IconCar size={48} color="#4c6ef5" stroke={1.5} />
+        <ThemeIcon size={48} radius="md" variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>
+          <IconCar size={30} />
+        </ThemeIcon>
       </Center>
       
       <Title
@@ -58,11 +79,15 @@ export default function Auth() {
       >
         E-Auto
       </Title>
-      <Text color="dimmed" size="sm" align="center" mt={5}>
-        Araç Yönetim Sistemi.
+      <Text color="dimmed" size="sm" align="center" mt={5} mb={30}>
+        Araç Yönetim Sistemi
       </Text>
 
-      <Paper withBorder shadow="md" p={30} mt={30} radius="md">
+      <Paper withBorder shadow="md" p={30} radius="md">
+        <Text size="lg" weight={500} align="center" mb="md">
+          {isRegister ? 'Yeni Hesap Oluştur' : 'Giriş Yap'}
+        </Text>
+
         <form onSubmit={handleSubmit}>
           <Stack>
             <TextInput
@@ -83,16 +108,35 @@ export default function Auth() {
 
             <Button 
               fullWidth 
-              mt="xl" 
               type="submit" 
               loading={loading}
               variant="gradient"
               gradient={{ from: 'indigo', to: 'cyan' }}
             >
-              Giriş Yap
+              {isRegister ? 'Kayıt Ol' : 'Giriş Yap'}
             </Button>
           </Stack>
         </form>
+
+        <Divider label="veya" labelPosition="center" my="lg" />
+
+        <Group position="center" spacing={5}>
+          <Text size="sm" color="dimmed">
+            {isRegister ? 'Zaten hesabınız var mı?' : 'Hesabınız yok mu?'}
+          </Text>
+          <Button 
+            variant="subtle" 
+            size="sm"
+            compact
+            onClick={() => {
+              setIsRegister(!isRegister)
+              setEmail('')
+              setPassword('')
+            }}
+          >
+            {isRegister ? 'Giriş Yap' : 'Kayıt Ol'}
+          </Button>
+        </Group>
       </Paper>
     </Container>
   )

@@ -1,14 +1,9 @@
 import { useState } from 'react'
 import {
   AppShell,
-  Navbar,
-  Header,
-  Text,
-  MediaQuery,
-  Burger,
-  useMantineTheme,
-  UnstyledButton,
   Group,
+  Text,
+  UnstyledButton,
   ThemeIcon,
   Divider,
   Stack,
@@ -23,6 +18,7 @@ import {
   IconUserOff,
   IconLogout,
   IconCarOff,
+  IconMenu2,
 } from '@tabler/icons-react'
 
 const mainLinks = [
@@ -34,7 +30,6 @@ const mainLinks = [
 ]
 
 export default function Layout({ children }) {
-  const theme = useMantineTheme()
   const [opened, setOpened] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -42,7 +37,11 @@ export default function Layout({ children }) {
 
   const MainLink = ({ icon: Icon, color, label, to }) => (
     <UnstyledButton
-      sx={(theme) => ({
+      onClick={() => {
+        navigate(to)
+        setOpened(false)
+      }}
+      style={(theme) => ({
         display: 'block',
         width: '100%',
         padding: theme.spacing.xs,
@@ -56,10 +55,6 @@ export default function Layout({ children }) {
             theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
         },
       })}
-      onClick={() => {
-        navigate(to)
-        setOpened(false)
-      }}
     >
       <Group>
         <ThemeIcon color={color} variant="light">
@@ -72,78 +67,73 @@ export default function Layout({ children }) {
 
   return (
     <AppShell
-      styles={{
-        main: {
-          background: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0],
-        },
+      header={{ height: 60 }}
+      navbar={{
+        width: 250,
+        breakpoint: 'sm',
+        collapsed: { mobile: !opened }
       }}
-      navbarOffsetBreakpoint="sm"
-      navbar={
-        <Navbar
-          p="md"
-          hiddenBreakpoint="sm"
-          hidden={!opened}
-          width={{ sm: 200, lg: 250 }}
-        >
-          <Stack justify="space-between" h="100%">
-            <Stack>
-              <Text size="xs" color="dimmed" weight={500}>ANA MENÜ</Text>
-              {mainLinks.map((link) => (
-                <MainLink {...link} key={link.label} />
-              ))}
-            </Stack>
-            
-            <Stack>
-              <Divider />
-              <UnstyledButton
-                sx={(theme) => ({
-                  display: 'block',
-                  width: '100%',
-                  padding: theme.spacing.xs,
-                  borderRadius: theme.radius.sm,
-                  color: theme.colors.red[6],
-                  '&:hover': {
-                    backgroundColor:
-                      theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
-                  },
-                })}
-                onClick={signOut}
-              >
-                <Group>
-                  <ThemeIcon color="red" variant="light">
-                    <IconLogout size={18} />
-                  </ThemeIcon>
-                  <Text size="sm">Çıkış Yap</Text>
-                </Group>
-              </UnstyledButton>
-            </Stack>
-          </Stack>
-        </Navbar>
-      }
-      header={
-        <Header height={{ base: 50, md: 60 }} p="md">
-          <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-            <MediaQuery largerThan="sm" styles={{ display: 'none' }}>
-              <Burger
-                opened={opened}
-                onClick={() => setOpened((o) => !o)}
-                size="sm"
-                color={theme.colors.gray[6]}
-                mr="xl"
-              />
-            </MediaQuery>
-
+      padding="md"
+    >
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group>
+            <ActionIcon
+              variant="subtle"
+              onClick={() => setOpened(!opened)}
+              display={{ sm: 'none' }}
+            >
+              <IconMenu2 size={18} />
+            </ActionIcon>
             <Group>
               <ThemeIcon size="lg" radius="md" variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }}>
                 <IconCar size={20} />
               </ThemeIcon>
               <Text weight={700} size="lg" color="indigo">E-Auto</Text>
             </Group>
-          </div>
-        </Header>
-      }
-    >
-      {children}
+          </Group>
+        </Group>
+      </AppShell.Header>
+
+      <AppShell.Navbar p="md">
+        <Stack justify="space-between" h="100%">
+          <Stack>
+            <Text size="xs" color="dimmed" weight={500}>ANA MENÜ</Text>
+            {mainLinks.map((link) => (
+              <MainLink {...link} key={link.label} />
+            ))}
+          </Stack>
+          
+          <Stack>
+            <Divider />
+            <UnstyledButton
+              onClick={signOut}
+              style={(theme) => ({
+                display: 'block',
+                width: '100%',
+                padding: theme.spacing.xs,
+                borderRadius: theme.radius.sm,
+                color: theme.colors.red[6],
+                '&:hover': {
+                  backgroundColor:
+                    theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
+                },
+              })}
+            >
+              <Group>
+                <ThemeIcon color="red" variant="light">
+                  <IconLogout size={18} />
+                </ThemeIcon>
+                <Text size="sm">Çıkış Yap</Text>
+              </Group>
+            </UnstyledButton>
+          </Stack>
+        </Stack>
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        {children}
+      </AppShell.Main>
     </AppShell>
   )
 } 

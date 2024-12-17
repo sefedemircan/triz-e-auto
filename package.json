@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@mantine/core": "^7.15.1",
+    "@mantine/dates": "^7.15.1",
+    "@mantine/form": "^7.15.1",
+    "@mantine/hooks": "^7.15.1",
+    "@mantine/notifications": "^7.15.1",
+    "@supabase/supabase-js": "^2.47.8",
+    "@tabler/icons-react": "^3.26.0",
+    "dayjs": "^1.11.13",
+    "postcss": "^8.4.49",
+    "postcss-preset-mantine": "^1.17.0",
+    "react-router-dom": "^7.0.2"
+  }
+}
