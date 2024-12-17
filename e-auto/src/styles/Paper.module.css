@@ -1,0 +1,18 @@
+.paper {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.paper:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mantine-shadow-md);
+}
+
+.paper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--mantine-radius-md);
+  background: linear-gradient(45deg, rgba(0,0,0,0.02) 0%, rgba(255,255,255,0.02) 100%);
+  pointer-events: none;
+} 

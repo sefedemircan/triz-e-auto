@@ -4,6 +4,7 @@ import { notifications } from '@mantine/notifications'
 import { supabase } from '../lib/supabase'
 import dayjs from 'dayjs'
 import { IconCar, IconCalendar } from '@tabler/icons-react'
+import classes from '../styles/Paper.module.css'
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -99,7 +100,12 @@ export default function Dashboard() {
       
       <Grid>
         <Grid.Col span={3}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.totalVehicles}</Badge>
@@ -108,7 +114,12 @@ export default function Dashboard() {
           </Paper>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.availableVehicles}</Badge>
@@ -117,7 +128,12 @@ export default function Dashboard() {
           </Paper>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.inMaintenanceVehicles}</Badge>
@@ -126,7 +142,12 @@ export default function Dashboard() {
           </Paper>
         </Grid.Col>
         <Grid.Col span={3}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.soldVehicles}</Badge>
@@ -138,7 +159,12 @@ export default function Dashboard() {
 
       <Grid>
         <Grid.Col span={4}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.totalEmployees}</Badge>
@@ -147,7 +173,12 @@ export default function Dashboard() {
           </Paper>
         </Grid.Col>
         <Grid.Col span={4}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.totalExpenses.toLocaleString('tr-TR')} ₺</Badge>
@@ -156,7 +187,12 @@ export default function Dashboard() {
           </Paper>
         </Grid.Col>
         <Grid.Col span={4}>
-          <Paper p="xl" className="stat-card">
+          <Paper 
+            p="md" 
+            radius="md" 
+            withBorder 
+            className={classes.paper}
+          >
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.totalSales.toLocaleString('tr-TR')} ₺</Badge>

@@ -12,6 +12,7 @@ import Employees from './pages/Employees'
 import ExEmployees from './pages/ExEmployees'
 import VehicleDetails from './pages/VehicleDetails'
 import SoldVehicles from './pages/SoldVehicles'
+import FinancialReport from './pages/FinancialReport'
 
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
@@ -114,6 +115,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SoldVehicles />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/financial-report"
+                element={
+                  <ProtectedRoute>
+                    <FinancialReport />
                   </ProtectedRoute>
                 }
               />

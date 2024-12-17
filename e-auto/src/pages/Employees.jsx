@@ -17,9 +17,10 @@ import {
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
-import { IconEdit, IconTrash, IconPlus, IconArrowRight, IconUsers } from '@tabler/icons-react'
+import { IconEdit, IconTrash, IconPlus, IconArrowRight, IconUsers, IconCash } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import dayjs from 'dayjs'
+import classes from '../styles/Paper.module.css'
 
 const roleLabels = {
   manager: 'Yönetici',
@@ -41,23 +42,34 @@ export default function Employees() {
       email: '',
       phone: '',
       role: '',
+      hire_date: new Date(),
       salary: 0,
+      insurance_amount: 0,
       salary_day: 1,
-      hire_date: null,
     },
     validate: {
-      first_name: (value) => !value && 'Ad zorunludur',
-      last_name: (value) => !value && 'Soyad zorunludur',
-      email: (value) => !/^\S+@\S+$/.test(value) && 'Geçerli bir email adresi girin',
-      role: (value) => !value && 'Rol seçimi zorunludur',
-      salary: (value) => value <= 0 && 'Geçerli bir maaş girin',
-      salary_day: (value) => (value < 1 || value > 31) && 'Geçerli bir maaş günü girin (1-31)',
+      first_name: (value) => !value && 'Ad giriniz',
+      last_name: (value) => !value && 'Soyad giriniz',
+      email: (value) => !value && 'Email giriniz',
+      role: (value) => !value && 'Pozisyon seçiniz',
+      salary: (value) => value <= 0 && 'Geçerli bir maaş giriniz',
+      insurance_amount: (value) => value <= 0 && 'Geçerli bir SGK tutarı giriniz',
+      salary_day: (value) => (value < 1 || value > 31) && 'Geçerli bir gün giriniz',
     },
   })
 
   useEffect(() => {
     fetchEmployees()
   }, [])
+
+  useEffect(() => {
+    if (editingEmployee) {
+      form.setValues({
+        ...editingEmployee,
+        hire_date: editingEmployee.hire_date ? new Date(editingEmployee.hire_date) : null,
+      })
+    }
+  }, [editingEmployee])
 
   const fetchEmployees = async () => {
     try {
@@ -171,6 +183,92 @@ export default function Employees() {
     }
   }
 
+  const handleSalaryPayment = async (employee) => {
+    try {
+      // Maaş ödemesi kaydı
+      const { error: paymentError } = await supabase
+        .from('employee_payments')
+        .insert([{
+          employee_id: employee.id,
+          payment_date: new Date().toISOString(),
+          amount: employee.salary,
+          type: 'salary',
+          description: `${dayjs().format('MMMM YYYY')} Maaş Ödemesi`,
+        }])
+
+      if (paymentError) throw paymentError
+
+      // Masraf olarak ekle
+      const { error: expenseError } = await supabase
+        .from('vehicle_expenses')
+        .insert([{
+          expense_type: 'other',
+          amount: employee.salary,
+          description: `Maaş Ödemesi: ${employee.first_name} ${employee.last_name}`,
+          expense_date: new Date().toISOString(),
+        }])
+
+      if (expenseError) throw expenseError
+
+      notifications.show({
+        title: 'Başarılı',
+        message: 'Maaş ödemesi kaydedildi',
+        color: 'green',
+      })
+
+      fetchEmployees()
+    } catch (error) {
+      notifications.show({
+        title: 'Hata',
+        message: error.message,
+        color: 'red',
+      })
+    }
+  }
+
+  const handleInsurancePayment = async (employee) => {
+    try {
+      // Sigorta ödemesi kaydı
+      const { error: paymentError } = await supabase
+        .from('employee_payments')
+        .insert([{
+          employee_id: employee.id,
+          payment_date: new Date().toISOString(),
+          amount: employee.insurance_amount,
+          type: 'insurance',
+          description: `${dayjs().format('MMMM YYYY')} SGK Ödemesi`,
+        }])
+
+      if (paymentError) throw paymentError
+
+      // Masraf olarak ekle
+      const { error: expenseError } = await supabase
+        .from('vehicle_expenses')
+        .insert([{
+          expense_type: 'other',
+          amount: employee.insurance_amount,
+          description: `SGK Ödemesi: ${employee.first_name} ${employee.last_name}`,
+          expense_date: new Date().toISOString(),
+        }])
+
+      if (expenseError) throw expenseError
+
+      notifications.show({
+        title: 'Başarılı',
+        message: 'SGK ödemesi kaydedildi',
+        color: 'green',
+      })
+
+      fetchEmployees()
+    } catch (error) {
+      notifications.show({
+        title: 'Hata',
+        message: error.message,
+        color: 'red',
+      })
+    }
+  }
+
   return (
     <Stack spacing="lg">
       <Group position="apart">
@@ -194,7 +292,12 @@ export default function Employees() {
         </Button>
       </Group>
 
-      <Paper p="md" radius="md">
+      <Paper
+        p="md"
+        radius="md"
+        withBorder
+        className={classes.paper}
+      >
         <Table highlightOnHover>
           <thead>
             <tr>
@@ -204,6 +307,7 @@ export default function Employees() {
               <th>Pozisyon</th>
               <th>İşe Giriş</th>
               <th>Maaş</th>
+              <th>SGK</th>
               <th>Maaş Günü</th>
               <th>İşlemler</th>
             </tr>
@@ -213,15 +317,38 @@ export default function Employees() {
               <tr key={employee.id}>
                 <td>{employee.first_name} {employee.last_name}</td>
                 <td>{employee.email}</td>
-                <td>{employee.phone}</td>
+                <td>{employee.phone || '-'}</td>
                 <td>
                   <Badge>{roleLabels[employee.role]}</Badge>
                 </td>
                 <td>{new Date(employee.hire_date).toLocaleDateString('tr-TR')}</td>
-                <td>{employee.salary.toLocaleString('tr-TR')} ₺</td>
+                <td>{employee.salary?.toLocaleString('tr-TR')} ₺</td>
+                <td>{employee.insurance_amount?.toLocaleString('tr-TR')} ₺</td>
                 <td>{employee.salary_day}</td>
                 <td>
                   <Group spacing={4}>
+                    <ActionIcon 
+                      color="green"
+                      onClick={() => {
+                        if (window.confirm(`${employee.first_name} ${employee.last_name} için ${employee.salary.toLocaleString('tr-TR')} ₺ maaş ödemesi yapılacak. Onaylıyor musunuz?`)) {
+                          handleSalaryPayment(employee)
+                        }
+                      }}
+                      title="Maaş Öde"
+                    >
+                      <IconCash size={18} />
+                    </ActionIcon>
+                    <ActionIcon 
+                      color="blue"
+                      onClick={() => {
+                        if (window.confirm(`${employee.first_name} ${employee.last_name} için ${employee.insurance_amount.toLocaleString('tr-TR')} ₺ SGK ödemesi yapılacak. Onaylıyor musunuz?`)) {
+                          handleInsurancePayment(employee)
+                        }
+                      }}
+                      title="SGK Öde"
+                    >
+                      <IconCash size={18} />
+                    </ActionIcon>
                     <ActionIcon onClick={() => {
                       setEditingEmployee(employee)
                       form.setValues(employee)
@@ -307,7 +434,8 @@ export default function Employees() {
                 placeholder="Tarih seçin"
                 valueFormat="DD.MM.YYYY"
                 clearable
-                {...form.getInputProps('hire_date')}
+                value={form.values.hire_date ? new Date(form.values.hire_date) : null}
+                onChange={(date) => form.setFieldValue('hire_date', date)}
               />
             </Group>
 

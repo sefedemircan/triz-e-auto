@@ -19,6 +19,7 @@ import {
   IconLogout,
   IconCarOff,
   IconMenu2,
+  IconChartBar,
 } from '@tabler/icons-react'
 
 const mainLinks = [
@@ -27,6 +28,7 @@ const mainLinks = [
   { icon: IconCarOff, color: 'grape', label: 'Satılan Araçlar', to: '/sold-vehicles' },
   { icon: IconUsers, color: 'orange', label: 'Personel', to: '/employees' },
   { icon: IconUserOff, color: 'red', label: 'Eski Personel', to: '/ex-employees' },
+  { icon: IconChartBar, color: 'green', label: 'Finansal Rapor', to: '/financial-report' },
 ]
 
 export default function Layout({ children }) {
@@ -74,6 +76,11 @@ export default function Layout({ children }) {
         collapsed: { mobile: !opened }
       }}
       padding="md"
+      styles={{
+        main: {
+          background: 'linear-gradient(to bottom right, #f8f9fa, #e9ecef)',
+        }
+      }}
     >
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">

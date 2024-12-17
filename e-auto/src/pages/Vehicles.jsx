@@ -21,6 +21,7 @@ import { IconEdit, IconTrash, IconPlus, IconEye, IconCash, IconCar } from '@tabl
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
+import classes from '../styles/Paper.module.css'
 
 const statusColors = {
   available: 'green',
@@ -49,31 +50,39 @@ export default function Vehicles() {
       model: '',
       year: new Date().getFullYear(),
       plate: '',
-      purchase_date: null,
+      purchase_date: new Date(),
       purchase_price: 0,
-      status: 'available',
     },
     validate: {
-      brand: (value) => !value && 'Marka zorunludur',
-      model: (value) => !value && 'Model zorunludur',
-      plate: (value) => !value && 'Plaka zorunludur',
-      purchase_price: (value) => value <= 0 && 'Geçerli bir alış fiyatı girin',
+      brand: (value) => !value && 'Marka giriniz',
+      model: (value) => !value && 'Model giriniz',
+      plate: (value) => !value && 'Plaka giriniz',
+      purchase_price: (value) => value <= 0 && 'Geçerli bir fiyat giriniz',
     },
   })
 
   const saleForm = useForm({
     initialValues: {
-      sale_date: null,
+      sale_date: new Date(),
       sale_price: 0,
     },
     validate: {
-      sale_price: (value) => value <= 0 && 'Geçerli bir satış fiyatı girin',
+      sale_price: (value) => value <= 0 && 'Geçerli bir fiyat giriniz',
     },
   })
 
   useEffect(() => {
     fetchVehicles()
   }, [])
+
+  useEffect(() => {
+    if (editingVehicle) {
+      form.setValues({
+        ...editingVehicle,
+        purchase_date: new Date(editingVehicle.purchase_date),
+      })
+    }
+  }, [editingVehicle])
 
   const fetchVehicles = async () => {
     try {
@@ -98,15 +107,15 @@ export default function Vehicles() {
 
   const handleSubmit = async (values) => {
     try {
-      const formData = {
+      const formattedValues = {
         ...values,
-        purchase_date: values.purchase_date ? dayjs(values.purchase_date).format('YYYY-MM-DD') : null,
+        purchase_date: dayjs(values.purchase_date).format('YYYY-MM-DD'),
       }
 
       if (editingVehicle) {
         const { error } = await supabase
           .from('vehicles')
-          .update(formData)
+          .update(formattedValues)
           .eq('id', editingVehicle.id)
 
         if (error) throw error
@@ -119,7 +128,7 @@ export default function Vehicles() {
       } else {
         const { error } = await supabase
           .from('vehicles')
-          .insert([formData])
+          .insert([{ ...formattedValues, status: 'available' }])
 
         if (error) throw error
 
@@ -145,7 +154,10 @@ export default function Vehicles() {
 
   const handleEdit = (vehicle) => {
     setEditingVehicle(vehicle)
-    form.setValues(vehicle)
+    form.setValues({
+      ...vehicle,
+      purchase_date: vehicle.purchase_date ? new Date(vehicle.purchase_date) : null,
+    })
     setOpened(true)
   }
 
@@ -182,7 +194,7 @@ export default function Vehicles() {
         .from('vehicles')
         .update({
           status: 'sold',
-          sale_date: values.sale_date ? dayjs(values.sale_date).format('YYYY-MM-DD') : null,
+          sale_date: dayjs(values.sale_date).format('YYYY-MM-DD'),
           sale_price: values.sale_price,
         })
         .eq('id', sellingVehicle.id)
@@ -231,7 +243,12 @@ export default function Vehicles() {
         </Button>
       </Group>
 
-      <Paper p="md" radius="md">
+      <Paper 
+        p="md" 
+        radius="md" 
+        withBorder 
+        className={classes.paper}
+      >
         <Table highlightOnHover>
           <thead>
             <tr>
@@ -304,7 +321,6 @@ export default function Vehicles() {
             <Text>{editingVehicle ? 'Araç Düzenle' : 'Yeni Araç Ekle'}</Text>
           </Group>
         }
-        size="md"
       >
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack>
@@ -314,52 +330,51 @@ export default function Vehicles() {
               placeholder="Mercedes"
               {...form.getInputProps('brand')}
             />
+
             <TextInput
               required
               label="Model"
               placeholder="C200"
               {...form.getInputProps('model')}
             />
+
             <NumberInput
               required
               label="Yıl"
-              placeholder="2024"
+              placeholder="2023"
               min={1900}
               max={new Date().getFullYear()}
               {...form.getInputProps('year')}
             />
+
             <TextInput
               required
               label="Plaka"
               placeholder="34ABC123"
               {...form.getInputProps('plate')}
             />
+
             <DateInput
               required
               label="Alış Tarihi"
               placeholder="Tarih seçin"
               valueFormat="DD.MM.YYYY"
               clearable
-              {...form.getInputProps('purchase_date')}
+              value={form.values.purchase_date ? new Date(form.values.purchase_date) : null}
+              onChange={(date) => form.setFieldValue('purchase_date', date)}
             />
+
             <NumberInput
               required
               label="Alış Fiyatı"
-              placeholder="750000"
+              placeholder="500000"
               min={0}
               {...form.getInputProps('purchase_price')}
             />
-            <Select
-              required
-              label="Durum"
-              data={[
-                { value: 'available', label: 'Satışta' },
-                { value: 'sold', label: 'Satıldı' },
-                { value: 'in_maintenance', label: 'Bakımda' },
-              ]}
-              {...form.getInputProps('status')}
-            />
-            <Button type="submit">Kaydet</Button>
+
+            <Button type="submit">
+              {editingVehicle ? 'Güncelle' : 'Ekle'}
+            </Button>
           </Stack>
         </form>
       </Modal>
@@ -371,15 +386,7 @@ export default function Vehicles() {
           saleForm.reset()
           setSellingVehicle(null)
         }}
-        title={
-          <Group spacing="xs">
-            <ThemeIcon color="green" variant="light">
-              <IconCash size={16} />
-            </ThemeIcon>
-            <Text>Araç Satış</Text>
-          </Group>
-        }
-        size="md"
+        title="Araç Satış"
       >
         <form onSubmit={saleForm.onSubmit(handleSale)}>
           <Stack>
@@ -389,31 +396,18 @@ export default function Vehicles() {
               placeholder="Tarih seçin"
               valueFormat="DD.MM.YYYY"
               clearable
-              {...saleForm.getInputProps('sale_date')}
+              value={saleForm.values.sale_date ? new Date(saleForm.values.sale_date) : null}
+              onChange={(date) => saleForm.setFieldValue('sale_date', date)}
             />
+
             <NumberInput
               required
               label="Satış Fiyatı"
-              placeholder="850000"
+              placeholder="600000"
               min={0}
               {...saleForm.getInputProps('sale_price')}
             />
-            <Group position="apart">
-              <Text size="sm">Alış Fiyatı:</Text>
-              <Text size="sm" weight={500}>
-                {sellingVehicle?.purchase_price.toLocaleString('tr-TR')} ₺
-              </Text>
-            </Group>
-            <Group position="apart">
-              <Text size="sm">Tahmini Kar:</Text>
-              <Text 
-                size="sm" 
-                weight={500}
-                color={saleForm.values.sale_price > (sellingVehicle?.purchase_price || 0) ? 'green' : 'red'}
-              >
-                {(saleForm.values.sale_price - (sellingVehicle?.purchase_price || 0)).toLocaleString('tr-TR')} ₺
-              </Text>
-            </Group>
+
             <Button type="submit">Satışı Tamamla</Button>
           </Stack>
         </form>
