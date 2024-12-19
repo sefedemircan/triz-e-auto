@@ -96,9 +96,6 @@ export default function VehicleForm() {
 
         console.log('Public URL:', data.publicUrl)
 
-        const testImage = new Image()
-        testImage.src = data.publicUrl
-
         newPhotos.push(URL.createObjectURL(file))
         newUploadedPhotos.push({ 
           path: filePath,

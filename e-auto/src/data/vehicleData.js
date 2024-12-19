@@ -44,11 +44,18 @@ export const vehicleBrands = {
       value: 'volkswagen', 
       label: 'Volkswagen',
       models: [
+        { 
+          value: 'passat', 
+          label: 'Passat',
+          variants: [
+            { value: 'passat-1-6-tdi-comfortline', label: '1.6 TDI Comfortline' },
+            { value: 'passat-1-6-tdi-highline', label: '1.6 TDI Highline' },
+            { value: 'passat-2-0-tdi-elegance', label: '2.0 TDI Elegance' },
+          ]
+        },
         { value: 'golf', label: 'Golf' },
-        { value: 'passat', label: 'Passat' },
-        { value: 'polo', label: 'Polo' },
-        { value: 'jetta', label: 'Jetta' },
         { value: 'arteon', label: 'Arteon' },
+        { value: 'jetta', label: 'Jetta' },
       ]
     },
     { 
