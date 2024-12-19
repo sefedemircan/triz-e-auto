@@ -127,7 +127,7 @@ export default function Auth() {
           <Button 
             variant="subtle" 
             size="sm"
-            compact
+            compact="true"
             onClick={() => {
               setIsRegister(!isRegister)
               setEmail('')

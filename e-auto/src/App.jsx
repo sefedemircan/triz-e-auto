@@ -7,12 +7,14 @@ import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
-import Vehicles from './pages/Vehicles'
 import Employees from './pages/Employees'
 import ExEmployees from './pages/ExEmployees'
 import VehicleDetails from './pages/VehicleDetails'
 import SoldVehicles from './pages/SoldVehicles'
 import FinancialReport from './pages/FinancialReport'
+import VehicleList from './pages/VehicleList'
+import VehicleForm from './pages/VehicleForm'
+import VehicleEdit from './pages/VehicleEdit'
 
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
@@ -82,7 +84,23 @@ function App() {
                 path="/vehicles"
                 element={
                   <ProtectedRoute>
-                    <Vehicles />
+                    <VehicleList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vehicles/new"
+                element={
+                  <ProtectedRoute>
+                    <VehicleForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vehicles/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <VehicleEdit />
                   </ProtectedRoute>
                 }
               />

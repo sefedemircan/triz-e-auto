@@ -8,8 +8,10 @@
     "@supabase/supabase-js": "^2.47.8",
     "@tabler/icons-react": "^3.26.0",
     "dayjs": "^1.11.13",
+    "mantine-datatable": "^7.14.5",
     "postcss": "^8.4.49",
     "postcss-preset-mantine": "^1.17.0",
-    "react-router-dom": "^7.0.2"
+    "react-router-dom": "^7.0.2",
+    "uuid": "^11.0.3"
   }
 }
