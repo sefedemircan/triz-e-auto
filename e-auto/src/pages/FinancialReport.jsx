@@ -168,7 +168,7 @@ export default function FinancialReport() {
                   <th>Tutar</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody style={{ textAlign: 'center' }}>
                 {incomes.map((income) => (
                   <tr key={income.id}>
                     <td>{dayjs(income.sale_date).format('DD.MM.YYYY')}</td>
@@ -198,7 +198,7 @@ export default function FinancialReport() {
                   <th>Tutar</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody style={{ textAlign: 'center' }}>
                 {expenses.map((expense) => (
                   <tr key={expense.id}>
                     <td>{dayjs(expense.expense_date).format('DD.MM.YYYY')}</td>

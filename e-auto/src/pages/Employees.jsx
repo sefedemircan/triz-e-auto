@@ -312,7 +312,7 @@ export default function Employees() {
               <th>İşlemler</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody style={{ textAlign: 'center' }}>
             {employees.map((employee) => (
               <tr key={employee.id}>
                 <td>{employee.first_name} {employee.last_name}</td>
