@@ -10,6 +10,7 @@ import {
   ActionIcon,
   Box,
   Paper,
+  useMantineColorScheme,
 } from '@mantine/core'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -22,6 +23,8 @@ import {
   IconCarOff,
   IconMenu2,
   IconChartBar,
+  IconSun,
+  IconMoon,
 } from '@tabler/icons-react'
 
 const mainLinks = [
@@ -38,6 +41,8 @@ export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { signOut } = useAuth()
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme()
+  const isDark = colorScheme === 'dark'
 
   const MainLink = ({ icon: Icon, color, label, to }) => {
     const isActive = location.pathname === to
@@ -108,10 +113,14 @@ export default function Layout({ children }) {
       padding="md"
       styles={(theme) => ({
         main: {
-          background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+          background: isDark 
+            ? 'linear-gradient(135deg, #1A1B1E 0%, #25262B 100%)'
+            : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
         },
         header: {
-          background: 'linear-gradient(45deg, #4263eb 0%, #00b8d4 100%)',
+          background: isDark
+            ? 'linear-gradient(45deg, #2C2E33 0%, #373A40 100%)'
+            : 'linear-gradient(45deg, #4263eb 0%, #00b8d4 100%)',
           borderBottom: 'none'
         }
       })}
@@ -156,16 +165,28 @@ export default function Layout({ children }) {
                 day: 'numeric' 
               })}
             </Text>
+            <ActionIcon
+              variant="subtle"
+              color={isDark ? 'yellow' : 'blue'}
+              onClick={toggleColorScheme}
+              title={isDark ? 'Açık tema' : 'Koyu tema'}
+            >
+              {isDark ? <IconSun size={18} /> : <IconMoon size={18} />}
+            </ActionIcon>
           </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar 
         p="md"
-        style={{
-          background: 'white',
-          borderRight: '1px solid #eee'
-        }}
+        styles={(theme) => ({
+          root: {
+            background: isDark ? theme.colors.dark[7] : 'white',
+            borderRight: `1px solid ${
+              isDark ? theme.colors.dark[4] : theme.colors.gray[2]
+            }`
+          }
+        })}
       >
         <Stack justify="space-between" h="100%">
           <Stack>
@@ -221,9 +242,13 @@ export default function Layout({ children }) {
             p="md"
             radius="lg"
             sx={(theme) => ({
-              backgroundColor: 'rgba(255,255,255,0.8)',
+              backgroundColor: isDark 
+                ? 'rgba(26, 27, 30, 0.8)'
+                : 'rgba(255, 255, 255, 0.8)',
               backdropFilter: 'blur(10px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+              boxShadow: isDark
+                ? '0 4px 6px rgba(0,0,0,0.2)'
+                : '0 4px 6px rgba(0,0,0,0.05)',
             })}
           >
             {children}
