@@ -198,7 +198,7 @@ export default function Employees() {
 
       if (paymentError) throw paymentError
 
-      // Masraf olarak ekle
+      // Masraf olarak ekle - vehicle_id olmadan
       const { error: expenseError } = await supabase
         .from('vehicle_expenses')
         .insert([{
@@ -206,6 +206,7 @@ export default function Employees() {
           amount: employee.salary,
           description: `Maaş Ödemesi: ${employee.first_name} ${employee.last_name}`,
           expense_date: new Date().toISOString(),
+          vehicle_id: null // vehicle_id'yi null olarak ayarla
         }])
 
       if (expenseError) throw expenseError
@@ -241,7 +242,7 @@ export default function Employees() {
 
       if (paymentError) throw paymentError
 
-      // Masraf olarak ekle
+      // Masraf olarak ekle - vehicle_id olmadan
       const { error: expenseError } = await supabase
         .from('vehicle_expenses')
         .insert([{
@@ -249,6 +250,7 @@ export default function Employees() {
           amount: employee.insurance_amount,
           description: `SGK Ödemesi: ${employee.first_name} ${employee.last_name}`,
           expense_date: new Date().toISOString(),
+          vehicle_id: null // vehicle_id'yi null olarak ayarla
         }])
 
       if (expenseError) throw expenseError

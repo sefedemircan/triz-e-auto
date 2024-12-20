@@ -25,6 +25,7 @@ import {
   IconChartBar,
   IconSun,
   IconMoon,
+  IconTool,
 } from '@tabler/icons-react'
 
 const mainLinks = [
@@ -34,6 +35,12 @@ const mainLinks = [
   { icon: IconUsers, color: 'orange', label: 'Personel', to: '/employees' },
   { icon: IconUserOff, color: 'red', label: 'Eski Personel', to: '/ex-employees' },
   { icon: IconChartBar, color: 'green', label: 'Finansal Rapor', to: '/financial-report' },
+  { 
+    icon: IconTool, 
+    color: 'blue', 
+    label: 'Bakım ve Giderler', 
+    to: '/maintenance' 
+  },
 ]
 
 export default function Layout({ children }) {
@@ -98,6 +105,7 @@ export default function Layout({ children }) {
       case '/employees': return 'Personel yönetimi'
       case '/ex-employees': return 'Eski çalışan kayıtları'
       case '/financial-report': return 'Finansal raporlar ve analizler'
+      case '/maintenance': return 'Bakım ve giderler'
       default: return ''
     }
   }

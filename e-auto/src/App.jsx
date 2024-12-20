@@ -16,6 +16,7 @@ import VehicleList from './pages/VehicleList'
 import VehicleForm from './pages/VehicleForm'
 import VehicleEdit from './pages/VehicleEdit'
 import { useLocalStorage } from '@mantine/hooks'
+import VehicleMaintenance from './pages/VehicleMaintenance'
 
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
@@ -171,6 +172,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <FinancialReport />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/maintenance"
+                element={
+                  <ProtectedRoute>
+                    <VehicleMaintenance />
                   </ProtectedRoute>
                 }
               />

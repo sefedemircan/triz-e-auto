@@ -1,10 +1,33 @@
 import { useState, useEffect } from 'react'
-import { Paper, Text, Group, Grid, Stack, Badge } from '@mantine/core'
+import { Paper, Text, Group, Grid, Stack, Badge, Divider, ThemeIcon, Table } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { supabase } from '../lib/supabase'
 import dayjs from 'dayjs'
-import { IconCar, IconCalendar } from '@tabler/icons-react'
+import { IconCar, IconCalendar, IconTool, IconSettings, IconReceipt, IconShieldCheck } from '@tabler/icons-react'
 import classes from '../styles/Paper.module.css'
+
+const EXPENSE_TYPES = {
+  maintenance: {
+    label: 'Periyodik Bakım',
+    color: 'blue',
+    icon: IconTool,
+  },
+  repair: {
+    label: 'Tamir',
+    color: 'red',
+    icon: IconSettings,
+  },
+  insurance: {
+    label: 'Sigorta',
+    color: 'green',
+    icon: IconShieldCheck,
+  },
+  other: {
+    label: 'Diğer',
+    color: 'gray',
+    icon: IconReceipt,
+  },
+}
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -21,8 +44,21 @@ export default function Dashboard() {
     upcomingSalaries: []
   })
 
+  const [maintenanceStats, setMaintenanceStats] = useState({
+    totalExpenses: 0,
+    upcomingServices: [],
+    recentExpenses: [],
+    expensesByType: {
+      maintenance: 0,
+      repair: 0,
+      insurance: 0,
+      other: 0
+    }
+  })
+
   useEffect(() => {
     fetchDashboardData()
+    fetchMaintenanceStats()
   }, [])
 
   const fetchDashboardData = async () => {
@@ -89,6 +125,66 @@ export default function Dashboard() {
         color: 'red',
       })
     }
+  }
+
+  const fetchMaintenanceStats = async () => {
+    try {
+      const { data: expenses, error: expensesError } = await supabase
+        .from('vehicle_expenses')
+        .select(`
+          *,
+          vehicle:vehicles (
+            brand,
+            model,
+            plate
+          )
+        `)
+        .order('expense_date', { ascending: false })
+        .limit(10)
+
+      if (expensesError) throw expensesError
+
+      const recentExpenses = expenses
+
+      // Gider tipine göre toplam tutarlar - sadece araç giderleri
+      const expensesByType = expenses
+        .filter(exp => exp.vehicle_id !== null) // Sadece araç giderlerini filtrele
+        .reduce((acc, expense) => {
+          acc[expense.expense_type] = (acc[expense.expense_type] || 0) + expense.amount
+          return acc
+        }, {
+          maintenance: 0,
+          repair: 0,
+          insurance: 0,
+          other: 0
+        })
+
+      setMaintenanceStats({
+        totalExpenses: expenses
+          .filter(exp => exp.vehicle_id !== null) // Sadece araç giderlerinin toplamı
+          .reduce((sum, exp) => sum + exp.amount, 0),
+        recentExpenses: expenses.filter(exp => exp.vehicle_id !== null), // Sadece araç giderlerini göster
+        expensesByType
+      })
+
+    } catch (error) {
+      notifications.show({
+        title: 'Hata',
+        message: 'Bakım istatistikleri yüklenirken bir hata oluştu',
+        color: 'red',
+      })
+    }
+  }
+
+  // En yüksek gider kategorisini hesaplayan fonksiyon
+  const getMaxExpenseType = () => {
+    const maxType = Object.entries(maintenanceStats.expensesByType)
+      .reduce((max, [key, amount]) => 
+        amount > max.amount ? { key, amount } : max,
+        { key: '', amount: 0 }
+      )
+    
+    return maxType.amount === 0 ? null : maxType
   }
 
   return (
@@ -257,6 +353,142 @@ export default function Dashboard() {
                 </Badge>
               </Group>
             ))}
+          </Paper>
+        </Grid.Col>
+      </Grid>
+
+      <Grid>
+        <Grid.Col span={12}>
+          <Paper p="xl">
+            <Group position="apart" mb="lg">
+              <Group spacing="xs">
+                <ThemeIcon color="blue" variant="light">
+                  <IconTool size={18} />
+                </ThemeIcon>
+                <Text weight={500}>Bakım ve Giderler</Text>
+              </Group>
+              <Badge variant="dot">Son İşlemler</Badge>
+            </Group>
+
+            <Grid mb="md">
+              <Grid.Col span={3}>
+                <Paper withBorder p="md" radius="md">
+                  <Group position="apart" mb="xs">
+                    <Text size="sm" color="dimmed">Toplam Gider</Text>
+                    <ThemeIcon color="red" variant="light">
+                      <IconReceipt size={16} />
+                    </ThemeIcon>
+                  </Group>
+                  <Text size="xl" weight={700} color="red">
+                    {maintenanceStats.totalExpenses.toLocaleString('tr-TR')} ₺
+                  </Text>
+                </Paper>
+              </Grid.Col>
+
+              <Grid.Col span={3}>
+                <Paper withBorder p="md" radius="md">
+                  <Group position="apart" mb="xs">
+                    <Text size="sm" color="dimmed">Bu Ayki Gider</Text>
+                    <ThemeIcon color="orange" variant="light">
+                      <IconCalendar size={16} />
+                    </ThemeIcon>
+                  </Group>
+                  <Text size="xl" weight={700} color="orange">
+                    {maintenanceStats.recentExpenses
+                      .filter(exp => dayjs(exp.expense_date).format('MM-YYYY') === dayjs().format('MM-YYYY'))
+                      .reduce((sum, exp) => sum + exp.amount, 0)
+                      .toLocaleString('tr-TR')} ₺
+                  </Text>
+                </Paper>
+              </Grid.Col>
+
+              {Object.entries(EXPENSE_TYPES).map(([key, { label, icon: Icon, color }]) => {
+                const amount = maintenanceStats.expensesByType[key]
+                if (amount === 0) return null
+
+                return (
+                  <Grid.Col span={3} key={key}>
+                    <Paper withBorder p="md" radius="md">
+                      <Group position="apart" mb="xs">
+                        <Text size="sm" color="dimmed">{label}</Text>
+                        <ThemeIcon color={color} variant="light">
+                          <Icon size={16} />
+                        </ThemeIcon>
+                      </Group>
+                      <Text size="xl" weight={700} color={color}>
+                        {amount.toLocaleString('tr-TR')} ₺
+                      </Text>
+                    </Paper>
+                  </Grid.Col>
+                )
+              })}
+            </Grid>
+
+            <Divider mb="md" />
+
+            <Paper withBorder>
+              <Table highlightOnHover>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'center' }}>Tarih</th>
+                    <th style={{ textAlign: 'center' }}>Araç</th>
+                    <th style={{ textAlign: 'center' }}>Plaka</th>
+                    <th style={{ textAlign: 'center' }}>Kategori</th>
+                    <th style={{ textAlign: 'center' }}>Açıklama</th>
+                    <th style={{ textAlign: 'center' }}>Tutar</th>
+                  </tr>
+                </thead>
+                <tbody style={{ textAlign: 'center' }}>
+                  {maintenanceStats.recentExpenses.map((expense) => (
+                    <tr key={expense.id}>
+                      <td>{dayjs(expense.expense_date).format('DD.MM.YYYY')}</td>
+                      <td>
+                        {expense.vehicle ? (
+                          <Text size="sm">
+                            {expense.vehicle.brand} {expense.vehicle.model}
+                          </Text>
+                        ) : (
+                          <Text size="sm" color="dimmed">
+                            -
+                          </Text>
+                        )}
+                      </td>
+                      <td>
+                        {expense.vehicle ? (
+                          <Badge variant="dot" color="gray">
+                            {expense.vehicle.plate}
+                          </Badge>
+                        ) : (
+                          <Text size="xs" color="dimmed">
+                            -
+                          </Text>
+                        )}
+                      </td>
+                      <td>
+                        <Badge 
+                          color={EXPENSE_TYPES[expense.expense_type].color}
+                          variant="light"
+                        >
+                          {EXPENSE_TYPES[expense.expense_type].label}
+                        </Badge>
+                      </td>
+                      <td>{expense.description}</td>
+                      <td>
+                        <Text weight={500} color="red">
+                          {expense.amount.toLocaleString('tr-TR')} ₺
+                        </Text>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </Paper>
+
+            {maintenanceStats.recentExpenses.length === 0 && (
+              <Text color="dimmed" align="center" mt="md">
+                Henüz gider kaydı bulunmuyor
+              </Text>
+            )}
           </Paper>
         </Grid.Col>
       </Grid>
