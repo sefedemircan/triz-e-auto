@@ -185,35 +185,38 @@ export default function Employees() {
 
   const handleSalaryPayment = async (employee) => {
     try {
+      // Sadece maaş tutarını hesapla (yemek ve sigorta hariç)
+      const salaryAmount = employee.salary || 0
+
       // Maaş ödemesi kaydı
       const { error: paymentError } = await supabase
         .from('employee_payments')
         .insert([{
           employee_id: employee.id,
           payment_date: new Date().toISOString(),
-          amount: employee.salary,
+          amount: salaryAmount, // Sadece maaş tutarı
           type: 'salary',
           description: `${dayjs().format('MMMM YYYY')} Maaş Ödemesi`,
         }])
 
       if (paymentError) throw paymentError
 
-      // Masraf olarak ekle - vehicle_id olmadan
+      // Masraf olarak ekle
       const { error: expenseError } = await supabase
         .from('vehicle_expenses')
         .insert([{
           expense_type: 'other',
-          amount: employee.salary,
+          amount: salaryAmount, // Sadece maaş tutarı
           description: `Maaş Ödemesi: ${employee.first_name} ${employee.last_name}`,
           expense_date: new Date().toISOString(),
-          vehicle_id: null // vehicle_id'yi null olarak ayarla
+          vehicle_id: null
         }])
 
       if (expenseError) throw expenseError
 
       notifications.show({
         title: 'Başarılı',
-        message: 'Maaş ödemesi kaydedildi',
+        message: `${salaryAmount.toLocaleString('tr-TR')} ₺ maaş ödemesi kaydedildi`,
         color: 'green',
       })
 
@@ -229,35 +232,37 @@ export default function Employees() {
 
   const handleInsurancePayment = async (employee) => {
     try {
+      const insuranceAmount = employee.insurance_amount || 0
+
       // Sigorta ödemesi kaydı
       const { error: paymentError } = await supabase
         .from('employee_payments')
         .insert([{
           employee_id: employee.id,
           payment_date: new Date().toISOString(),
-          amount: employee.insurance_amount,
+          amount: insuranceAmount,
           type: 'insurance',
           description: `${dayjs().format('MMMM YYYY')} SGK Ödemesi`,
         }])
 
       if (paymentError) throw paymentError
 
-      // Masraf olarak ekle - vehicle_id olmadan
+      // Masraf olarak ekle
       const { error: expenseError } = await supabase
         .from('vehicle_expenses')
         .insert([{
           expense_type: 'other',
-          amount: employee.insurance_amount,
+          amount: insuranceAmount,
           description: `SGK Ödemesi: ${employee.first_name} ${employee.last_name}`,
           expense_date: new Date().toISOString(),
-          vehicle_id: null // vehicle_id'yi null olarak ayarla
+          vehicle_id: null
         }])
 
       if (expenseError) throw expenseError
 
       notifications.show({
         title: 'Başarılı',
-        message: 'SGK ödemesi kaydedildi',
+        message: `${insuranceAmount.toLocaleString('tr-TR')} ₺ SGK ödemesi kaydedildi`,
         color: 'green',
       })
 

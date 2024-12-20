@@ -88,15 +88,29 @@ export default function Dashboard() {
         .order('sale_date', { ascending: false })
         .limit(5)
 
-      // Yaklaşan maaş ödemeleri
-      const upcomingSalaries = employees.map(employee => ({
-        ...employee,
-        nextPayment: dayjs()
-          .date(employee.salary_day)
-          .format('DD.MM.YYYY'),
-        totalCost: employee.salary + (employee.insurance_amount || 0) + (employee.food_allowance || 0)
-      }))
-      .sort((a, b) => a.salary_day - b.salary_day)
+      // Yaklaşan maaş ödemeleri - sadece maaş tutarları
+      const upcomingSalaries = employees.map(employee => {
+        const nextPaymentDate = dayjs().date(employee.salary_day)
+        // Eğer bu ayki ödeme günü geçtiyse, gelecek ayın tarihini hesapla
+        const paymentDate = nextPaymentDate.isBefore(dayjs()) 
+          ? nextPaymentDate.add(1, 'month') 
+          : nextPaymentDate
+
+        return {
+          ...employee,
+          nextPayment: paymentDate.format('DD.MM.YYYY'),
+          salary: employee.salary || 0,
+          insurance: employee.insurance_amount || 0,
+          foodAllowance: employee.food_allowance || 0,
+          // Her ödeme türü için ayrı alanlar
+          paymentDetails: [
+            { label: 'Maaş', amount: employee.salary || 0 },
+            { label: 'SGK', amount: employee.insurance_amount || 0 },
+            { label: 'Yemek', amount: employee.food_allowance || 0 },
+          ]
+        }
+      })
+      .sort((a, b) => dayjs(a.nextPayment).diff(dayjs(b.nextPayment))) // Tarihe göre sırala
 
       setStats({
         totalVehicles: vehicles.length,
@@ -104,10 +118,12 @@ export default function Dashboard() {
         inMaintenanceVehicles: vehicles.filter(v => v.status === 'in_maintenance').length,
         soldVehicles: vehicles.filter(v => v.status === 'sold').length,
         totalEmployees: employees.length,
+        // Tüm giderlerin toplamı (araç + personel)
         totalExpenses: expenses.reduce((sum, exp) => sum + exp.amount, 0),
         totalSales: vehicles
           .filter(v => v.status === 'sold')
           .reduce((sum, v) => sum + (v.sale_price - v.purchase_price), 0),
+        // Tüm aylık giderler (araç + personel)
         monthlyExpenses: expenses
           .filter(exp => exp.expense_date >= startOfMonth && exp.expense_date <= endOfMonth)
           .reduce((sum, exp) => sum + exp.amount, 0),
@@ -331,28 +347,38 @@ export default function Dashboard() {
           <Paper p="xl">
             <Group position="apart" mb="lg">
               <Text weight={500}>Yaklaşan Maaş Ödemeleri</Text>
-              <Badge variant="dot">Son 5 Maaş</Badge>
+              <Badge variant="dot">Yaklaşan Ödemeler</Badge>
             </Group>
             {stats.upcomingSalaries.map(employee => (
-              <Group key={employee.id} position="apart" mb="md">
-                <Stack spacing={4}>
-                  <Text weight={500}>{employee.first_name} {employee.last_name}</Text>
-                  <Group spacing={6}>
-                    <IconCalendar size={14} />
-                    <Text size="sm" color="dimmed">
+              <Stack key={employee.id} mb="md" spacing="xs">
+                <Group position="apart">
+                  <Group spacing="xs">
+                    <Text weight={500}>{employee.first_name} {employee.last_name}</Text>
+                    <Badge size="sm" variant="dot">
                       {employee.nextPayment}
-                    </Text>
+                    </Badge>
                   </Group>
-                </Stack>
-                <Badge 
-                  color="blue" 
-                  size="lg"
-                  variant="light"
-                >
-                  {employee.totalCost.toLocaleString('tr-TR')} ₺
-                </Badge>
-              </Group>
+                </Group>
+                <Group spacing="lg">
+                  {employee.paymentDetails.map((payment, index) => (
+                    payment.amount > 0 && (
+                      <Group key={index} spacing={4}>
+                        <Text size="sm" color="dimmed">{payment.label}:</Text>
+                        <Text size="sm" weight={500}>
+                          {payment.amount.toLocaleString('tr-TR')} ₺
+                        </Text>
+                      </Group>
+                    )
+                  ))}
+                </Group>
+                <Divider />
+              </Stack>
             ))}
+            {stats.upcomingSalaries.length === 0 && (
+              <Text color="dimmed" align="center">
+                Yaklaşan maaş ödemesi bulunmuyor
+              </Text>
+            )}
           </Paper>
         </Grid.Col>
       </Grid>
