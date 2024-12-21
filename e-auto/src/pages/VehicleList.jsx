@@ -24,6 +24,7 @@ import { IconPlus, IconEdit, IconTrash, IconCar, IconCurrencyLira } from '@table
 import dayjs from 'dayjs'
 import { DateInput } from '@mantine/dates'
 import { confirmModal } from '../utils/confirmModal'
+import { vehicleBrands } from '../data/vehicleData'
 
 const vehicleTypeLabels = {
   car: 'Otomobil',
@@ -52,6 +53,17 @@ const formatPrice = (price) => {
     currency: 'TRY',
     minimumFractionDigits: 2
   }).format(price)
+}
+
+const getBrandLabel = (brandValue, type) => {
+  const brand = vehicleBrands[type]?.find(b => b.value === brandValue)
+  return brand?.label || brandValue
+}
+
+const getModelLabel = (modelValue, type, brandValue) => {
+  const brand = vehicleBrands[type]?.find(b => b.value === brandValue)
+  const model = brand?.models?.find(m => m.value === modelValue)
+  return model?.label || modelValue
 }
 
 export default function VehicleList() {
@@ -258,12 +270,17 @@ export default function VehicleList() {
 
             <Stack spacing="xs" mt="md">
               <Group position="apart">
-                <Text size="lg" weight={500}>
-                  {vehicle.brand} {vehicle.model}
+                <Group spacing="xs">
+                  <Text size="lg" weight={500}>
+                    {getBrandLabel(vehicle.brand, vehicle.type)} {getModelLabel(vehicle.model, vehicle.type, vehicle.brand)}
+                  </Text>
+                  <Badge color={statusLabels[vehicle.status].color}>
+                    {statusLabels[vehicle.status].label}
+                  </Badge>
+                </Group>
+                <Text weight={700} color="blue" size="lg">
+                  {vehicle.purchase_price?.toLocaleString('tr-TR')} ₺
                 </Text>
-                <Badge color={statusLabels[vehicle.status].color}>
-                  {statusLabels[vehicle.status].label}
-                </Badge>
               </Group>
 
               <Group spacing="xs">
@@ -272,37 +289,38 @@ export default function VehicleList() {
                 <Badge variant="light">{fuelTypeLabels[vehicle.fuel_type]}</Badge>
               </Group>
 
-              <Text size="sm" color="dimmed">
-                {vehicle.plate}
-              </Text>
-
-              <Group position="right" spacing={4}>
-                {vehicle.status === 'available' && (
-                  <Tooltip label="Sat">
+              <Group position="apart">
+                <Text size="sm" color="dimmed">
+                  {vehicle.plate}
+                </Text>
+                <Group spacing={4}>
+                  {vehicle.status === 'available' && (
+                    <Tooltip label="Sat">
+                      <ActionIcon
+                        color="green"
+                        onClick={() => handleSellClick(vehicle)}
+                      >
+                        <IconCurrencyLira size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  <Tooltip label="Düzenle">
                     <ActionIcon
-                      color="green"
-                      onClick={() => handleSellClick(vehicle)}
+                      color="blue"
+                      onClick={() => navigate(`/vehicles/${vehicle.id}/edit`)}
                     >
-                      <IconCurrencyLira size={18} />
+                      <IconEdit size={18} />
                     </ActionIcon>
                   </Tooltip>
-                )}
-                <Tooltip label="Düzenle">
-                  <ActionIcon
-                    color="blue"
-                    onClick={() => navigate(`/vehicles/${vehicle.id}/edit`)}
-                  >
-                    <IconEdit size={18} />
-                  </ActionIcon>
-                </Tooltip>
-                <Tooltip label="Sil">
-                  <ActionIcon
-                    color="red"
-                    onClick={() => handleDelete(vehicle.id)}
-                  >
-                    <IconTrash size={18} />
-                  </ActionIcon>
-                </Tooltip>
+                  <Tooltip label="Sil">
+                    <ActionIcon
+                      color="red"
+                      onClick={() => handleDelete(vehicle.id)}
+                    >
+                      <IconTrash size={18} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
               </Group>
             </Stack>
           </Card>
