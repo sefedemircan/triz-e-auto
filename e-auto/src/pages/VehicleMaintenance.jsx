@@ -30,6 +30,7 @@ import {
 } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import dayjs from 'dayjs'
+import { confirmModal } from '../utils/confirmModal'
 
 const EXPENSE_TYPES = {
   maintenance: {
@@ -238,23 +239,28 @@ export default function VehicleMaintenance() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bu kaydı silmek istediğinizden emin misiniz?')) return
-
     try {
-      const { error } = await supabase
-        .from('vehicle_expenses')
-        .delete()
-        .eq('id', id)
+      await confirmModal({
+        title: 'Kayıt Silme Onayı',
+        message: 'Bu bakım/gider kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+        confirmLabel: 'Evet, Sil',
+        onConfirm: async () => {
+          const { error } = await supabase
+            .from('vehicle_expenses')
+            .delete()
+            .eq('id', id)
 
-      if (error) throw error
+          if (error) throw error
 
-      notifications.show({
-        title: 'Başarılı',
-        message: 'Kayıt silindi',
-        color: 'green',
+          notifications.show({
+            title: 'Başarılı',
+            message: 'Kayıt silindi',
+            color: 'green',
+          })
+
+          fetchExpenses()
+        }
       })
-
-      fetchExpenses()
     } catch (error) {
       notifications.show({
         title: 'Hata',

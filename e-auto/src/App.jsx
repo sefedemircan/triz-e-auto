@@ -1,5 +1,6 @@
 import { MantineProvider, createTheme } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
+import { ModalsProvider } from '@mantine/modals'
 import { DatesProvider } from '@mantine/dates'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
@@ -98,105 +99,107 @@ function App() {
       }} 
       defaultColorScheme={colorScheme}
     >
-      <DatesProvider settings={{ locale: 'tr', firstDayOfWeek: 1 }}>
-        <Notifications />
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vehicles"
-                element={
-                  <ProtectedRoute>
-                    <VehicleList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vehicles/new"
-                element={
-                  <ProtectedRoute>
-                    <VehicleForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vehicles/:id/edit"
-                element={
-                  <ProtectedRoute>
-                    <VehicleEdit />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/employees"
-                element={
-                  <ProtectedRoute>
-                    <Employees />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/ex-employees"
-                element={
-                  <ProtectedRoute>
-                    <ExEmployees />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/vehicles/:id"
-                element={
-                  <ProtectedRoute>
-                    <VehicleDetails />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/sold-vehicles"
-                element={
-                  <ProtectedRoute>
-                    <SoldVehicles />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/financial-report"
-                element={
-                  <ProtectedRoute>
-                    <FinancialReport />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/maintenance"
-                element={
-                  <ProtectedRoute>
-                    <VehicleMaintenance />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/cash"
-                element={
-                  <ProtectedRoute>
-                    <CashManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<Navigate to="/auth" replace />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </DatesProvider>
+      <ModalsProvider>
+        <DatesProvider settings={{ locale: 'tr', firstDayOfWeek: 1 }}>
+          <Notifications />
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/vehicles"
+                  element={
+                    <ProtectedRoute>
+                      <VehicleList />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/vehicles/new"
+                  element={
+                    <ProtectedRoute>
+                      <VehicleForm />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/vehicles/:id/edit"
+                  element={
+                    <ProtectedRoute>
+                      <VehicleEdit />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/employees"
+                  element={
+                    <ProtectedRoute>
+                      <Employees />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/ex-employees"
+                  element={
+                    <ProtectedRoute>
+                      <ExEmployees />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/vehicles/:id"
+                  element={
+                    <ProtectedRoute>
+                      <VehicleDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/sold-vehicles"
+                  element={
+                    <ProtectedRoute>
+                      <SoldVehicles />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/financial-report"
+                  element={
+                    <ProtectedRoute>
+                      <FinancialReport />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/maintenance"
+                  element={
+                    <ProtectedRoute>
+                      <VehicleMaintenance />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/cash"
+                  element={
+                    <ProtectedRoute>
+                      <CashManagement />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/auth" replace />} />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </DatesProvider>
+      </ModalsProvider>
     </MantineProvider>
   )
 }

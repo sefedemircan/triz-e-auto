@@ -21,6 +21,7 @@ import { IconEdit, IconTrash, IconPlus, IconArrowRight, IconUsers, IconCash } fr
 import { supabase } from '../lib/supabase'
 import dayjs from 'dayjs'
 import classes from '../styles/Paper.module.css'
+import { confirmModal } from '../utils/confirmModal'
 
 const roleLabels = {
   manager: 'Yönetici',
@@ -140,87 +141,100 @@ export default function Employees() {
   }
 
   const handleTerminate = async (employee) => {
-    if (window.confirm(`${employee.first_name} ${employee.last_name} işten çıkarılacak. Onaylıyor musunuz?`)) {
-      try {
-        // Önce ex_employees tablosuna ekle
-        const { error: insertError } = await supabase
-          .from('ex_employees')
-          .insert([{
-            employee_id: employee.id,
-            first_name: employee.first_name,
-            last_name: employee.last_name,
-            email: employee.email,
-            phone: employee.phone,
-            role: employee.role,
-            hire_date: employee.hire_date,
-            termination_date: new Date().toISOString(),
-          }])
+    try {
+      await confirmModal({
+        title: 'İşten Çıkarma Onayı',
+        message: `${employee.first_name} ${employee.last_name} işten çıkarılacak. Bu işlem geri alınamaz. Onaylıyor musunuz?`,
+        confirmLabel: 'Evet, İşten Çıkar',
+        onConfirm: async () => {
+          // Önce ex_employees tablosuna ekle
+          const { error: insertError } = await supabase
+            .from('ex_employees')
+            .insert([{
+              employee_id: employee.id,
+              first_name: employee.first_name,
+              last_name: employee.last_name,
+              email: employee.email,
+              phone: employee.phone,
+              role: employee.role,
+              hire_date: employee.hire_date,
+              termination_date: new Date().toISOString(),
+            }])
 
-        if (insertError) throw insertError
+          if (insertError) throw insertError
 
-        // Sonra employees tablosundan sil
-        const { error: deleteError } = await supabase
-          .from('employees')
-          .delete()
-          .eq('id', employee.id)
+          // Sonra employees tablosundan sil
+          const { error: deleteError } = await supabase
+            .from('employees')
+            .delete()
+            .eq('id', employee.id)
 
-        if (deleteError) throw deleteError
+          if (deleteError) throw deleteError
 
-        notifications.show({
-          title: 'Başarılı',
-          message: 'Personel işten çıkarıldı',
-          color: 'green',
-        })
+          notifications.show({
+            title: 'Başarılı',
+            message: 'Personel işten çıkarıldı',
+            color: 'green',
+          })
 
-        fetchEmployees()
-      } catch (error) {
-        notifications.show({
-          title: 'Hata',
-          message: error.message,
-          color: 'red',
-        })
-      }
+          fetchEmployees()
+        }
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Hata',
+        message: error.message,
+        color: 'red',
+      })
     }
   }
 
   const handleSalaryPayment = async (employee) => {
     try {
-      // Sadece maaş tutarını hesapla (yemek ve sigorta hariç)
-      const salaryAmount = employee.salary || 0
+      const confirmed = await confirmModal({
+        title: 'Maaş Ödemesi',
+        message: `${employee.first_name} ${employee.last_name} için ${employee.salary.toLocaleString('tr-TR')} ₺ maaş ödemesi yapılacak. Onaylıyor musunuz?`,
+        confirmLabel: 'Evet, Öde',
+        confirmColor: 'green',
+        onConfirm: async () => {
+          // Sadece maaş tutarını hesapla (yemek ve sigorta hariç)
+          const salaryAmount = employee.salary || 0
 
-      // Maaş ödemesi kaydı
-      const { error: paymentError } = await supabase
-        .from('employee_payments')
-        .insert([{
-          employee_id: employee.id,
-          payment_date: new Date().toISOString(),
-          amount: salaryAmount, // Sadece maaş tutarı
-          type: 'salary',
-          description: `${dayjs().format('MMMM YYYY')} Maaş Ödemesi`,
-        }])
+          // Maaş ödemesi kaydı
+          const { error: paymentError } = await supabase
+            .from('employee_payments')
+            .insert([{
+              employee_id: employee.id,
+              payment_date: new Date().toISOString(),
+              amount: salaryAmount,
+              type: 'salary',
+              description: `${dayjs().format('MMMM YYYY')} Maaş Ödemesi`,
+            }])
 
-      if (paymentError) throw paymentError
+          if (paymentError) throw paymentError
 
-      // Masraf olarak ekle
-      const { error: expenseError } = await supabase
-        .from('vehicle_expenses')
-        .insert([{
-          expense_type: 'other',
-          amount: salaryAmount, // Sadece maaş tutarı
-          description: `Maaş Ödemesi: ${employee.first_name} ${employee.last_name}`,
-          expense_date: new Date().toISOString(),
-          vehicle_id: null
-        }])
+          // Masraf olarak ekle
+          const { error: expenseError } = await supabase
+            .from('vehicle_expenses')
+            .insert([{
+              expense_type: 'other',
+              amount: salaryAmount,
+              description: `Maaş Ödemesi: ${employee.first_name} ${employee.last_name}`,
+              expense_date: new Date().toISOString(),
+              vehicle_id: null
+            }])
 
-      if (expenseError) throw expenseError
+          if (expenseError) throw expenseError
 
-      notifications.show({
-        title: 'Başarılı',
-        message: `${salaryAmount.toLocaleString('tr-TR')} ₺ maaş ödemesi kaydedildi`,
-        color: 'green',
+          notifications.show({
+            title: 'Başarılı',
+            message: `${salaryAmount.toLocaleString('tr-TR')} ₺ maaş ödemesi kaydedildi`,
+            color: 'green',
+          })
+
+          fetchEmployees()
+        }
       })
-
-      fetchEmployees()
     } catch (error) {
       notifications.show({
         title: 'Hata',
@@ -232,41 +246,49 @@ export default function Employees() {
 
   const handleInsurancePayment = async (employee) => {
     try {
-      const insuranceAmount = employee.insurance_amount || 0
+      const confirmed = await confirmModal({
+        title: 'SGK Ödemesi',
+        message: `${employee.first_name} ${employee.last_name} için ${employee.insurance_amount.toLocaleString('tr-TR')} ₺ SGK ödemesi yapılacak. Onaylıyor musunuz?`,
+        confirmLabel: 'Evet, Öde',
+        confirmColor: 'green',
+        onConfirm: async () => {
+          const insuranceAmount = employee.insurance_amount || 0
 
-      // Sigorta ödemesi kaydı
-      const { error: paymentError } = await supabase
-        .from('employee_payments')
-        .insert([{
-          employee_id: employee.id,
-          payment_date: new Date().toISOString(),
-          amount: insuranceAmount,
-          type: 'insurance',
-          description: `${dayjs().format('MMMM YYYY')} SGK Ödemesi`,
-        }])
+          // Sigorta ödemesi kaydı
+          const { error: paymentError } = await supabase
+            .from('employee_payments')
+            .insert([{
+              employee_id: employee.id,
+              payment_date: new Date().toISOString(),
+              amount: insuranceAmount,
+              type: 'insurance',
+              description: `${dayjs().format('MMMM YYYY')} SGK Ödemesi`,
+            }])
 
-      if (paymentError) throw paymentError
+          if (paymentError) throw paymentError
 
-      // Masraf olarak ekle
-      const { error: expenseError } = await supabase
-        .from('vehicle_expenses')
-        .insert([{
-          expense_type: 'other',
-          amount: insuranceAmount,
-          description: `SGK Ödemesi: ${employee.first_name} ${employee.last_name}`,
-          expense_date: new Date().toISOString(),
-          vehicle_id: null
-        }])
+          // Masraf olarak ekle
+          const { error: expenseError } = await supabase
+            .from('vehicle_expenses')
+            .insert([{
+              expense_type: 'other',
+              amount: insuranceAmount,
+              description: `SGK Ödemesi: ${employee.first_name} ${employee.last_name}`,
+              expense_date: new Date().toISOString(),
+              vehicle_id: null
+            }])
 
-      if (expenseError) throw expenseError
+          if (expenseError) throw expenseError
 
-      notifications.show({
-        title: 'Başarılı',
-        message: `${insuranceAmount.toLocaleString('tr-TR')} ₺ SGK ödemesi kaydedildi`,
-        color: 'green',
+          notifications.show({
+            title: 'Başarılı',
+            message: `${insuranceAmount.toLocaleString('tr-TR')} ₺ SGK ödemesi kaydedildi`,
+            color: 'green',
+          })
+
+          fetchEmployees()
+        }
       })
-
-      fetchEmployees()
     } catch (error) {
       notifications.show({
         title: 'Hata',
@@ -336,22 +358,14 @@ export default function Employees() {
                   <Group spacing={4}>
                     <ActionIcon 
                       color="green"
-                      onClick={() => {
-                        if (window.confirm(`${employee.first_name} ${employee.last_name} için ${employee.salary.toLocaleString('tr-TR')} ₺ maaş ödemesi yapılacak. Onaylıyor musunuz?`)) {
-                          handleSalaryPayment(employee)
-                        }
-                      }}
+                      onClick={() => handleSalaryPayment(employee)}
                       title="Maaş Öde"
                     >
                       <IconCash size={18} />
                     </ActionIcon>
                     <ActionIcon 
                       color="blue"
-                      onClick={() => {
-                        if (window.confirm(`${employee.first_name} ${employee.last_name} için ${employee.insurance_amount.toLocaleString('tr-TR')} ₺ SGK ödemesi yapılacak. Onaylıyor musunuz?`)) {
-                          handleInsurancePayment(employee)
-                        }
-                      }}
+                      onClick={() => handleInsurancePayment(employee)}
                       title="SGK Öde"
                     >
                       <IconCash size={18} />
@@ -487,4 +501,4 @@ export default function Employees() {
       </Modal>
     </Stack>
   )
-} 
+}

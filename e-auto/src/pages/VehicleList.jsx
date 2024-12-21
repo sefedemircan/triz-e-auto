@@ -23,6 +23,7 @@ import { supabase } from '../lib/supabase'
 import { IconPlus, IconEdit, IconTrash, IconCar, IconCurrencyLira } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { DateInput } from '@mantine/dates'
+import { confirmModal } from '../utils/confirmModal'
 
 const vehicleTypeLabels = {
   car: 'Otomobil',
@@ -102,37 +103,42 @@ export default function VehicleList() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Bu aracı silmek istediğinizden emin misiniz?')) return
-
     try {
-      const vehicle = vehicles.find(v => v.id === id)
-      
-      // Önce fotoğrafları sil
-      if (vehicle.photos && vehicle.photos.length > 0) {
-        const photoPaths = vehicle.photos.map(url => url.split('/').pop())
+      await confirmModal({
+        title: 'Araç Silme Onayı',
+        message: 'Bu aracı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+        confirmLabel: 'Evet, Sil',
+        onConfirm: async () => {
+          const vehicle = vehicles.find(v => v.id === id)
+          
+          // Önce fotoğrafları sil
+          if (vehicle.photos && vehicle.photos.length > 0) {
+            const photoPaths = vehicle.photos.map(url => url.split('/').pop())
 
-        const { error: storageError } = await supabase.storage
-          .from('vehicle-photos')
-          .remove(photoPaths)
+            const { error: storageError } = await supabase.storage
+              .from('vehicle-photos')
+              .remove(photoPaths)
 
-        if (storageError) throw storageError
-      }
+            if (storageError) throw storageError
+          }
 
-      // Sonra araç kaydını sil
-      const { error } = await supabase
-        .from('vehicles')
-        .delete()
-        .eq('id', id)
+          // Sonra araç kaydını sil
+          const { error } = await supabase
+            .from('vehicles')
+            .delete()
+            .eq('id', id)
 
-      if (error) throw error
+          if (error) throw error
 
-      notifications.show({
-        title: 'Başarılı',
-        message: 'Araç başarıyla silindi',
-        color: 'green',
+          notifications.show({
+            title: 'Başarılı',
+            message: 'Araç başarıyla silindi',
+            color: 'green',
+          })
+
+          setVehicles(vehicles.filter(vehicle => vehicle.id !== id))
+        }
       })
-
-      setVehicles(vehicles.filter(vehicle => vehicle.id !== id))
     } catch (error) {
       notifications.show({
         title: 'Hata',

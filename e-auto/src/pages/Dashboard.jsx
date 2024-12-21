@@ -1,48 +1,65 @@
-import { useState, useEffect } from 'react'
-import { Paper, Text, Group, Grid, Stack, Badge, Divider, ThemeIcon, Table } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
-import { supabase } from '../lib/supabase'
-import dayjs from 'dayjs'
-import { IconCar, IconCalendar, IconTool, IconSettings, IconReceipt, IconShieldCheck } from '@tabler/icons-react'
-import classes from '../styles/Paper.module.css'
+import { useState, useEffect } from "react";
+import {
+  Paper,
+  Text,
+  Group,
+  Grid,
+  Stack,
+  Badge,
+  Divider,
+  ThemeIcon,
+  Table,
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { supabase } from "../lib/supabase";
+import dayjs from "dayjs";
+import {
+  IconCar,
+  IconCalendar,
+  IconTool,
+  IconSettings,
+  IconReceipt,
+  IconShieldCheck,
+} from "@tabler/icons-react";
+import classes from "../styles/Paper.module.css";
 
 const EXPENSE_TYPES = {
   maintenance: {
-    label: 'Periyodik Bakım',
-    color: 'blue',
+    label: "Periyodik Bakım",
+    color: "blue",
     icon: IconTool,
   },
   repair: {
-    label: 'Tamir',
-    color: 'red',
+    label: "Tamir",
+    color: "red",
     icon: IconSettings,
   },
   insurance: {
-    label: 'Sigorta',
-    color: 'green',
+    label: "Sigorta",
+    color: "green",
     icon: IconShieldCheck,
   },
   other: {
-    label: 'Diğer',
-    color: 'gray',
+    label: "Diğer",
+    color: "gray",
     icon: IconReceipt,
   },
-}
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
     totalVehicles: 0,
     availableVehicles: 0,
-    inMaintenanceVehicles: 0,
     soldVehicles: 0,
     totalEmployees: 0,
+    totalRevenue: 0,
     totalExpenses: 0,
-    totalSales: 0,
+    totalProfit: 0,
     monthlyExpenses: 0,
     monthlySales: 0,
     recentSales: [],
-    upcomingSalaries: []
-  })
+    upcomingSalaries: [],
+  });
 
   const [maintenanceStats, setMaintenanceStats] = useState({
     totalExpenses: 0,
@@ -52,264 +69,269 @@ export default function Dashboard() {
       maintenance: 0,
       repair: 0,
       insurance: 0,
-      other: 0
-    }
-  })
+      other: 0,
+    },
+  });
 
   useEffect(() => {
-    fetchDashboardData()
-    fetchMaintenanceStats()
-  }, [])
+    fetchDashboardData();
+    fetchMaintenanceStats();
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
       // Araç istatistikleri
-      const { data: vehicles } = await supabase
-        .from('vehicles')
-        .select('*')
+      const { data: vehicles } = await supabase.from("vehicles").select("*");
 
-      const { data: employees } = await supabase
-        .from('employees')
-        .select('*')
+      const { data: employees } = await supabase.from("employees").select("*");
 
       const { data: expenses } = await supabase
-        .from('vehicle_expenses')
-        .select('*')
+        .from("vehicle_expenses")
+        .select("*");
 
       // Bu ayın başlangıç ve bitiş tarihleri
-      const startOfMonth = dayjs().startOf('month').format('YYYY-MM-DD')
-      const endOfMonth = dayjs().endOf('month').format('YYYY-MM-DD')
+      const startOfMonth = dayjs().startOf("month").format("YYYY-MM-DD");
+      const endOfMonth = dayjs().endOf("month").format("YYYY-MM-DD");
 
       // Son satışlar (son 5)
       const { data: recentSales } = await supabase
-        .from('vehicles')
-        .select('*')
-        .eq('status', 'sold')
-        .order('sale_date', { ascending: false })
-        .limit(5)
+        .from("vehicles")
+        .select("*")
+        .eq("status", "sold")
+        .order("sale_date", { ascending: false })
+        .limit(5);
 
       // Yaklaşan maaş ödemeleri - sadece maaş tutarları
-      const upcomingSalaries = employees.map(employee => {
-        const nextPaymentDate = dayjs().date(employee.salary_day)
-        // Eğer bu ayki ödeme günü geçtiyse, gelecek ayın tarihini hesapla
-        const paymentDate = nextPaymentDate.isBefore(dayjs()) 
-          ? nextPaymentDate.add(1, 'month') 
-          : nextPaymentDate
+      const upcomingSalaries = employees
+        .map((employee) => {
+          const nextPaymentDate = dayjs().date(employee.salary_day);
+          // Eğer bu ayki ödeme günü geçtiyse, gelecek ayın tarihini hesapla
+          const paymentDate = nextPaymentDate.isBefore(dayjs())
+            ? nextPaymentDate.add(1, "month")
+            : nextPaymentDate;
 
-        return {
-          ...employee,
-          nextPayment: paymentDate.format('DD.MM.YYYY'),
-          salary: employee.salary || 0,
-          insurance: employee.insurance_amount || 0,
-          foodAllowance: employee.food_allowance || 0,
-          // Her ödeme türü için ayrı alanlar
-          paymentDetails: [
-            { label: 'Maaş', amount: employee.salary || 0 },
-            { label: 'SGK', amount: employee.insurance_amount || 0 },
-            { label: 'Yemek', amount: employee.food_allowance || 0 },
-          ]
-        }
-      })
-      .sort((a, b) => dayjs(a.nextPayment).diff(dayjs(b.nextPayment))) // Tarihe göre sırala
+          return {
+            ...employee,
+            nextPayment: paymentDate.format("DD.MM.YYYY"),
+            salary: employee.salary || 0,
+            insurance: employee.insurance_amount || 0,
+            foodAllowance: employee.food_allowance || 0,
+            // Her ödeme türü için ayrı alanlar
+            paymentDetails: [
+              { label: "Maaş", amount: employee.salary || 0 },
+              { label: "SGK", amount: employee.insurance_amount || 0 },
+              { label: "Yemek", amount: employee.food_allowance || 0 },
+            ],
+          };
+        })
+        .sort((a, b) => dayjs(a.nextPayment).diff(dayjs(b.nextPayment))); // Tarihe göre sırala
+
+      // Toplam gelir hesaplama (satılan araçların satış fiyatları toplamı)
+      const totalRevenue = vehicles
+        .filter((v) => v.status === "sold")
+        .reduce((sum, v) => sum + (v.sale_price || 0), 0);
+
+      // Toplam gider hesaplama
+      const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
       setStats({
         totalVehicles: vehicles.length,
-        availableVehicles: vehicles.filter(v => v.status === 'available').length,
-        inMaintenanceVehicles: vehicles.filter(v => v.status === 'in_maintenance').length,
-        soldVehicles: vehicles.filter(v => v.status === 'sold').length,
+        availableVehicles: vehicles.filter((v) => v.status === "available")
+          .length,
+        soldVehicles: vehicles.filter((v) => v.status === "sold").length,
         totalEmployees: employees.length,
-        // Tüm giderlerin toplamı (araç + personel)
-        totalExpenses: expenses.reduce((sum, exp) => sum + exp.amount, 0),
-        totalSales: vehicles
-          .filter(v => v.status === 'sold')
-          .reduce((sum, v) => sum + (v.sale_price - v.purchase_price), 0),
-        // Tüm aylık giderler (araç + personel)
+        totalRevenue: totalRevenue,
+        totalExpenses: totalExpenses,
+        totalProfit: totalRevenue - totalExpenses, // Yeni kar hesaplaması
         monthlyExpenses: expenses
-          .filter(exp => exp.expense_date >= startOfMonth && exp.expense_date <= endOfMonth)
+          .filter(
+            (exp) =>
+              exp.expense_date >= startOfMonth && exp.expense_date <= endOfMonth
+          )
           .reduce((sum, exp) => sum + exp.amount, 0),
         monthlySales: vehicles
-          .filter(v => v.status === 'sold' && v.sale_date >= startOfMonth && v.sale_date <= endOfMonth)
+          .filter(
+            (v) =>
+              v.status === "sold" &&
+              v.sale_date >= startOfMonth &&
+              v.sale_date <= endOfMonth
+          )
           .reduce((sum, v) => sum + (v.sale_price - v.purchase_price), 0),
         recentSales,
-        upcomingSalaries
-      })
-
+        upcomingSalaries,
+      });
     } catch (error) {
       notifications.show({
-        title: 'Hata',
-        message: 'Veriler yüklenirken bir hata oluştu',
-        color: 'red',
-      })
+        title: "Hata",
+        message: "Veriler yüklenirken bir hata oluştu",
+        color: "red",
+      });
     }
-  }
+  };
 
   const fetchMaintenanceStats = async () => {
     try {
       const { data: expenses, error: expensesError } = await supabase
-        .from('vehicle_expenses')
-        .select(`
+        .from("vehicle_expenses")
+        .select(
+          `
           *,
           vehicle:vehicles (
             brand,
             model,
             plate
           )
-        `)
-        .order('expense_date', { ascending: false })
-        .limit(10)
+        `
+        )
+        .order("expense_date", { ascending: false })
+        .limit(10);
 
-      if (expensesError) throw expensesError
+      if (expensesError) throw expensesError;
 
-      const recentExpenses = expenses
+      const recentExpenses = expenses;
 
       // Gider tipine göre toplam tutarlar - sadece araç giderleri
       const expensesByType = expenses
-        .filter(exp => exp.vehicle_id !== null) // Sadece araç giderlerini filtrele
-        .reduce((acc, expense) => {
-          acc[expense.expense_type] = (acc[expense.expense_type] || 0) + expense.amount
-          return acc
-        }, {
-          maintenance: 0,
-          repair: 0,
-          insurance: 0,
-          other: 0
-        })
+        .filter((exp) => exp.vehicle_id !== null) // Sadece araç giderlerini filtrele
+        .reduce(
+          (acc, expense) => {
+            acc[expense.expense_type] =
+              (acc[expense.expense_type] || 0) + expense.amount;
+            return acc;
+          },
+          {
+            maintenance: 0,
+            repair: 0,
+            insurance: 0,
+            other: 0,
+          }
+        );
 
       setMaintenanceStats({
         totalExpenses: expenses
-          .filter(exp => exp.vehicle_id !== null) // Sadece araç giderlerinin toplamı
+          .filter((exp) => exp.vehicle_id !== null) // Sadece araç giderlerinin toplamı
           .reduce((sum, exp) => sum + exp.amount, 0),
-        recentExpenses: expenses.filter(exp => exp.vehicle_id !== null), // Sadece araç giderlerini göster
-        expensesByType
-      })
-
+        recentExpenses: expenses.filter((exp) => exp.vehicle_id !== null), // Sadece araç giderlerini göster
+        expensesByType,
+      });
     } catch (error) {
       notifications.show({
-        title: 'Hata',
-        message: 'Bakım istatistikleri yüklenirken bir hata oluştu',
-        color: 'red',
-      })
+        title: "Hata",
+        message: "Bakım istatistikleri yüklenirken bir hata oluştu",
+        color: "red",
+      });
     }
-  }
+  };
 
   // En yüksek gider kategorisini hesaplayan fonksiyon
   const getMaxExpenseType = () => {
-    const maxType = Object.entries(maintenanceStats.expensesByType)
-      .reduce((max, [key, amount]) => 
-        amount > max.amount ? { key, amount } : max,
-        { key: '', amount: 0 }
-      )
-    
-    return maxType.amount === 0 ? null : maxType
-  }
+    const maxType = Object.entries(maintenanceStats.expensesByType).reduce(
+      (max, [key, amount]) => (amount > max.amount ? { key, amount } : max),
+      { key: "", amount: 0 }
+    );
+
+    return maxType.amount === 0 ? null : maxType;
+  };
 
   return (
     <Stack spacing="lg">
       <Group position="apart">
-        <Text size="xl" weight={600} color="indigo">Genel Bakış</Text>
-        <Text size="sm" color="dimmed">{dayjs().format('DD MMMM YYYY')}</Text>
+        <Text size="xl" weight={600} color="indigo">
+          Genel Bakış
+        </Text>
+        <Text size="sm" color="dimmed">
+          {dayjs().format("DD MMMM YYYY")}
+        </Text>
       </Group>
-      
+
       <Grid>
         <Grid.Col span={3}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.totalVehicles}</Badge>
             </Group>
-            <Text size="sm" color="dimmed">Toplam Araç</Text>
+            <Text size="sm" color="dimmed">
+              Toplam Araç
+            </Text>
           </Paper>
         </Grid.Col>
+
         <Grid.Col span={3}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.availableVehicles}</Badge>
             </Group>
-            <Text size="sm" color="dimmed">Satışta</Text>
+            <Text size="sm" color="dimmed">
+              Satışta
+            </Text>
           </Paper>
         </Grid.Col>
+
         <Grid.Col span={3}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
-            <Group position="apart" mb="xs">
-              <IconCar size={24} color="#4c6ef5" />
-              <Badge size="lg">{stats.inMaintenanceVehicles}</Badge>
-            </Group>
-            <Text size="sm" color="dimmed">Bakımda</Text>
-          </Paper>
-        </Grid.Col>
-        <Grid.Col span={3}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.soldVehicles}</Badge>
             </Group>
-            <Text size="sm" color="dimmed">Satılan</Text>
+            <Text size="sm" color="dimmed">
+              Satılan
+            </Text>
           </Paper>
         </Grid.Col>
-      </Grid>
 
-      <Grid>
-        <Grid.Col span={4}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
+        <Grid.Col span={3}>
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">{stats.totalEmployees}</Badge>
             </Group>
-            <Text size="sm" color="dimmed">Toplam Personel</Text>
+            <Text size="sm" color="dimmed">
+              Toplam Personel
+            </Text>
           </Paper>
         </Grid.Col>
+
         <Grid.Col span={4}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
-              <Badge size="lg">{stats.totalExpenses.toLocaleString('tr-TR')} ₺</Badge>
+              <Badge size="lg">
+                {stats.totalRevenue.toLocaleString("tr-TR")} ₺
+              </Badge>
             </Group>
-            <Text size="sm" color="dimmed">Toplam Gider</Text>
+            <Text size="sm" color="dimmed">
+              Toplam Gelir
+            </Text>
           </Paper>
         </Grid.Col>
+
         <Grid.Col span={4}>
-          <Paper 
-            p="md" 
-            radius="md" 
-            withBorder 
-            className={classes.paper}
-          >
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
-              <Badge size="lg">{stats.totalSales.toLocaleString('tr-TR')} ₺</Badge>
+              <Badge size="lg">
+                {stats.totalExpenses.toLocaleString("tr-TR")} ₺
+              </Badge>
             </Group>
-            <Text size="sm" color="dimmed">Toplam Kar</Text>
+            <Text size="sm" color="dimmed">
+              Toplam Gider
+            </Text>
+          </Paper>
+        </Grid.Col>
+
+        <Grid.Col span={4}>
+          <Paper p="md" radius="md" withBorder className={classes.paper}>
+            <Group position="apart" mb="xs">
+              <IconCar size={24} color="#4c6ef5" />
+              <Badge size="lg">
+                {stats.totalProfit.toLocaleString("tr-TR")} ₺
+              </Badge>
+            </Group>
+            <Text size="sm" color="dimmed">
+              Toplam Kar
+            </Text>
           </Paper>
         </Grid.Col>
       </Grid>
@@ -321,23 +343,24 @@ export default function Dashboard() {
               <Text weight={500}>Son Satışlar</Text>
               <Badge variant="dot">Son 5 Satış</Badge>
             </Group>
-            {stats.recentSales.map(sale => (
+            {stats.recentSales.map((sale) => (
               <Group key={sale.id} position="apart" mb="md">
                 <Stack spacing={4}>
-                  <Text weight={500}>{sale.brand} {sale.model}</Text>
+                  <Text weight={500}>
+                    {sale.brand} {sale.model}
+                  </Text>
                   <Group spacing={6}>
                     <IconCalendar size={14} />
                     <Text size="sm" color="dimmed">
-                      {dayjs(sale.sale_date).format('DD.MM.YYYY')}
+                      {dayjs(sale.sale_date).format("DD.MM.YYYY")}
                     </Text>
                   </Group>
                 </Stack>
-                <Badge 
-                  color="green" 
-                  size="lg"
-                  variant="light"
-                >
-                  {(sale.sale_price - sale.purchase_price).toLocaleString('tr-TR')} ₺
+                <Badge color="green" size="lg" variant="light">
+                  {(sale.sale_price - sale.purchase_price).toLocaleString(
+                    "tr-TR"
+                  )}{" "}
+                  ₺
                 </Badge>
               </Group>
             ))}
@@ -349,27 +372,32 @@ export default function Dashboard() {
               <Text weight={500}>Yaklaşan Maaş Ödemeleri</Text>
               <Badge variant="dot">Yaklaşan Ödemeler</Badge>
             </Group>
-            {stats.upcomingSalaries.map(employee => (
+            {stats.upcomingSalaries.map((employee) => (
               <Stack key={employee.id} mb="md" spacing="xs">
                 <Group position="apart">
                   <Group spacing="xs">
-                    <Text weight={500}>{employee.first_name} {employee.last_name}</Text>
+                    <Text weight={500}>
+                      {employee.first_name} {employee.last_name}
+                    </Text>
                     <Badge size="sm" variant="dot">
                       {employee.nextPayment}
                     </Badge>
                   </Group>
                 </Group>
                 <Group spacing="lg">
-                  {employee.paymentDetails.map((payment, index) => (
-                    payment.amount > 0 && (
-                      <Group key={index} spacing={4}>
-                        <Text size="sm" color="dimmed">{payment.label}:</Text>
-                        <Text size="sm" weight={500}>
-                          {payment.amount.toLocaleString('tr-TR')} ₺
-                        </Text>
-                      </Group>
-                    )
-                  ))}
+                  {employee.paymentDetails.map(
+                    (payment, index) =>
+                      payment.amount > 0 && (
+                        <Group key={index} spacing={4}>
+                          <Text size="sm" color="dimmed">
+                            {payment.label}:
+                          </Text>
+                          <Text size="sm" weight={500}>
+                            {payment.amount.toLocaleString("tr-TR")} ₺
+                          </Text>
+                        </Group>
+                      )
+                  )}
                 </Group>
                 <Divider />
               </Stack>
@@ -400,13 +428,15 @@ export default function Dashboard() {
               <Grid.Col span={3}>
                 <Paper withBorder p="md" radius="md">
                   <Group position="apart" mb="xs">
-                    <Text size="sm" color="dimmed">Toplam Gider</Text>
+                    <Text size="sm" color="dimmed">
+                      Toplam Gider
+                    </Text>
                     <ThemeIcon color="red" variant="light">
                       <IconReceipt size={16} />
                     </ThemeIcon>
                   </Group>
                   <Text size="xl" weight={700} color="red">
-                    {maintenanceStats.totalExpenses.toLocaleString('tr-TR')} ₺
+                    {maintenanceStats.totalExpenses.toLocaleString("tr-TR")} ₺
                   </Text>
                 </Paper>
               </Grid.Col>
@@ -414,40 +444,51 @@ export default function Dashboard() {
               <Grid.Col span={3}>
                 <Paper withBorder p="md" radius="md">
                   <Group position="apart" mb="xs">
-                    <Text size="sm" color="dimmed">Bu Ayki Gider</Text>
+                    <Text size="sm" color="dimmed">
+                      Bu Ayki Gider
+                    </Text>
                     <ThemeIcon color="orange" variant="light">
                       <IconCalendar size={16} />
                     </ThemeIcon>
                   </Group>
                   <Text size="xl" weight={700} color="orange">
                     {maintenanceStats.recentExpenses
-                      .filter(exp => dayjs(exp.expense_date).format('MM-YYYY') === dayjs().format('MM-YYYY'))
+                      .filter(
+                        (exp) =>
+                          dayjs(exp.expense_date).format("MM-YYYY") ===
+                          dayjs().format("MM-YYYY")
+                      )
                       .reduce((sum, exp) => sum + exp.amount, 0)
-                      .toLocaleString('tr-TR')} ₺
+                      .toLocaleString("tr-TR")}{" "}
+                    ₺
                   </Text>
                 </Paper>
               </Grid.Col>
 
-              {Object.entries(EXPENSE_TYPES).map(([key, { label, icon: Icon, color }]) => {
-                const amount = maintenanceStats.expensesByType[key]
-                if (amount === 0) return null
+              {Object.entries(EXPENSE_TYPES).map(
+                ([key, { label, icon: Icon, color }]) => {
+                  const amount = maintenanceStats.expensesByType[key];
+                  if (amount === 0) return null;
 
-                return (
-                  <Grid.Col span={3} key={key}>
-                    <Paper withBorder p="md" radius="md">
-                      <Group position="apart" mb="xs">
-                        <Text size="sm" color="dimmed">{label}</Text>
-                        <ThemeIcon color={color} variant="light">
-                          <Icon size={16} />
-                        </ThemeIcon>
-                      </Group>
-                      <Text size="xl" weight={700} color={color}>
-                        {amount.toLocaleString('tr-TR')} ₺
-                      </Text>
-                    </Paper>
-                  </Grid.Col>
-                )
-              })}
+                  return (
+                    <Grid.Col span={3} key={key}>
+                      <Paper withBorder p="md" radius="md">
+                        <Group position="apart" mb="xs">
+                          <Text size="sm" color="dimmed">
+                            {label}
+                          </Text>
+                          <ThemeIcon color={color} variant="light">
+                            <Icon size={16} />
+                          </ThemeIcon>
+                        </Group>
+                        <Text size="xl" weight={700} color={color}>
+                          {amount.toLocaleString("tr-TR")} ₺
+                        </Text>
+                      </Paper>
+                    </Grid.Col>
+                  );
+                }
+              )}
             </Grid>
 
             <Divider mb="md" />
@@ -456,18 +497,20 @@ export default function Dashboard() {
               <Table highlightOnHover>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'center' }}>Tarih</th>
-                    <th style={{ textAlign: 'center' }}>Araç</th>
-                    <th style={{ textAlign: 'center' }}>Plaka</th>
-                    <th style={{ textAlign: 'center' }}>Kategori</th>
-                    <th style={{ textAlign: 'center' }}>Açıklama</th>
-                    <th style={{ textAlign: 'center' }}>Tutar</th>
+                    <th style={{ textAlign: "center" }}>Tarih</th>
+                    <th style={{ textAlign: "center" }}>Araç</th>
+                    <th style={{ textAlign: "center" }}>Plaka</th>
+                    <th style={{ textAlign: "center" }}>Kategori</th>
+                    <th style={{ textAlign: "center" }}>Açıklama</th>
+                    <th style={{ textAlign: "center" }}>Tutar</th>
                   </tr>
                 </thead>
-                <tbody style={{ textAlign: 'center' }}>
+                <tbody style={{ textAlign: "center" }}>
                   {maintenanceStats.recentExpenses.map((expense) => (
                     <tr key={expense.id}>
-                      <td>{dayjs(expense.expense_date).format('DD.MM.YYYY')}</td>
+                      <td>
+                        {dayjs(expense.expense_date).format("DD.MM.YYYY")}
+                      </td>
                       <td>
                         {expense.vehicle ? (
                           <Text size="sm">
@@ -491,7 +534,7 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td>
-                        <Badge 
+                        <Badge
                           color={EXPENSE_TYPES[expense.expense_type].color}
                           variant="light"
                         >
@@ -501,7 +544,7 @@ export default function Dashboard() {
                       <td>{expense.description}</td>
                       <td>
                         <Text weight={500} color="red">
-                          {expense.amount.toLocaleString('tr-TR')} ₺
+                          {expense.amount.toLocaleString("tr-TR")} ₺
                         </Text>
                       </td>
                     </tr>
@@ -519,5 +562,5 @@ export default function Dashboard() {
         </Grid.Col>
       </Grid>
     </Stack>
-  )
-} 
+  );
+}

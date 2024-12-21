@@ -30,6 +30,16 @@ export const vehicleBrands = {
       ]
     },
     { 
+      value: 'tesla', 
+      label: 'Tesla',
+      models: [
+        { value: 'models', label: 'Model S' },
+        { value: 'modely', label: 'Model Y' },
+        { value: 'modelx', label: 'Model X' },
+        { value: 'model3', label: 'Model 3' },
+      ]
+    },
+    { 
       value: 'audi', 
       label: 'Audi',
       models: [
