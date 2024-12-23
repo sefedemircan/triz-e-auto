@@ -34,25 +34,35 @@ import dayjs from 'dayjs'
 import { confirmModal } from '../utils/confirmModal'
 
 const EXPENSE_TYPES = {
-  maintenance: {
-    label: 'Periyodik Bakım',
+  maintenance: { 
+    label: 'Bakım', 
     color: 'blue',
-    icon: IconTool,
+    icon: IconTool 
   },
-  repair: {
-    label: 'Tamir',
+  repair: { 
+    label: 'Onarım', 
     color: 'red',
-    icon: IconSettings,
+    icon: IconSettings 
   },
-  insurance: {
-    label: 'Sigorta',
+  insurance: { 
+    label: 'Sigorta', 
     color: 'green',
-    icon: IconShieldCheck,
+    icon: IconShieldCheck 
   },
-  other: {
-    label: 'Diğer',
+  tax: { 
+    label: 'Vergi', 
+    color: 'yellow',
+    icon: IconReceipt 
+  },
+  fuel: { 
+    label: 'Yakıt', 
+    color: 'orange',
+    icon: IconReceipt 
+  },
+  other: { 
+    label: 'Diğer', 
     color: 'gray',
-    icon: IconReceipt,
+    icon: IconReceipt 
   },
 }
 
@@ -126,6 +136,15 @@ export default function VehicleMaintenance() {
     }
   }, [modalOpened])
 
+  const expenseTypes = [
+    { value: 'maintenance', label: 'Bakım' },
+    { value: 'repair', label: 'Tamir' },
+    { value: 'insurance', label: 'Sigorta' },
+    { value: 'tax', label: 'Vergi' },
+    { value: 'fuel', label: 'Yakıt' },
+    { value: 'other', label: 'Diğer' },
+  ];
+
   const fetchExpenses = async () => {
     try {
       const { data, error } = await supabase
@@ -136,10 +155,6 @@ export default function VehicleMaintenance() {
           amount,
           description,
           expense_date,
-          next_service_date,
-          next_service_km,
-          service_details,
-          warranty_end_date,
           vehicle:vehicle_id(
             id,
             plate,
@@ -147,37 +162,49 @@ export default function VehicleMaintenance() {
             model:model_id(name)
           )
         `)
-        .order('expense_date', { ascending: false })
+        .not('expense_type', 'eq', 'salary')
+        .not('expense_type', 'eq', 'insurance_payment')
+        .not('expense_type', 'eq', 'bonus')
+        .not('expense_type', 'eq', 'food_allowance')
+        .order('expense_date', { ascending: false });
 
-      if (error) throw error
-      setExpenses(data || [])
+      if (error) throw error;
+      setExpenses(data || []);
     } catch (error) {
-      console.error('Error fetching expenses:', error)
+      console.error('Error fetching expenses:', error);
+      notifications.show({
+        title: 'Hata',
+        message: 'Giderler yüklenirken bir hata oluştu',
+        color: 'red',
+      });
     }
-  }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const expenseData = {
-        vehicle_id: selectedVehicle,
-        expense_type: formData.expense_type,
-        amount: parseFloat(formData.amount),
-        description: formData.description.trim(),
-        expense_date: dayjs(formData.expense_date).format('YYYY-MM-DD'),
-        next_service_date: formData.next_service_date ? 
-          dayjs(formData.next_service_date).format('YYYY-MM-DD') : null,
-        next_service_km: formData.next_service_km || null,
-        service_details: formData.service_details || null,
-        warranty_end_date: formData.warranty_end_date ? 
-          dayjs(formData.warranty_end_date).format('YYYY-MM-DD') : null
+      if (!selectedVehicle) {
+        throw new Error('Lütfen bir araç seçin')
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('vehicle_expenses')
-        .insert([expenseData])
+        .insert({
+          vehicle_id: selectedVehicle,
+          expense_type: formData.expense_type,
+          amount: parseFloat(formData.amount),
+          description: formData.description.trim(),
+          expense_date: dayjs(formData.expense_date).format('YYYY-MM-DD'),
+          next_service_date: formData.next_service_date ? 
+            dayjs(formData.next_service_date).format('YYYY-MM-DD') : null,
+          next_service_km: formData.next_service_km || null,
+          service_details: formData.service_details || null,
+          warranty_end_date: formData.warranty_end_date ? 
+            dayjs(formData.warranty_end_date).format('YYYY-MM-DD') : null
+        })
+        .select()
 
       if (error) throw error
 
@@ -187,8 +214,19 @@ export default function VehicleMaintenance() {
         color: 'green',
       })
 
+      setSelectedVehicle(null)
+      setFormData({
+        expense_type: activeTab,
+        amount: 0,
+        description: '',
+        expense_date: new Date(),
+        next_service_date: null,
+        next_service_km: null,
+        service_details: '',
+        warranty_end_date: null,
+      })
       setModalOpened(false)
-      resetForm()
+
       fetchExpenses()
     } catch (error) {
       console.error('Submit error:', error)
@@ -247,7 +285,7 @@ export default function VehicleMaintenance() {
           model:model_id(name),
           status
         `)
-        .eq('status', 'available')
+        .in('status', ['available', 'for_sale'])
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -347,7 +385,7 @@ export default function VehicleMaintenance() {
               <Tabs.Tab
                 key={key}
                 value={key}
-                leftSection={<Icon size={16} />}
+                leftSection={Icon && <Icon size={16} />}
               >
                 {label}
               </Tabs.Tab>
@@ -375,12 +413,12 @@ export default function VehicleMaintenance() {
                         <td>{dayjs(expense.expense_date).format('DD.MM.YYYY')}</td>
                         <td>
                           <Text size="sm">
-                            {expense.vehicle.brand} {expense.vehicle.model}
+                            {expense.vehicle?.brand?.name} {expense.vehicle?.model?.name}
                           </Text>
                         </td>
                         <td>
                           <Badge variant="dot" color="gray">
-                            {expense.vehicle.plate}
+                            {expense.vehicle?.plate}
                           </Badge>
                         </td>
                         <td>
@@ -435,38 +473,17 @@ export default function VehicleMaintenance() {
       >
         <form onSubmit={handleSubmit}>
           <Stack>
-            <Combobox
-              value={selectedVehicle || ''}
+            <Select
+              required
+              label="Araç"
+              placeholder="Araç seçin"
+              value={selectedVehicle}
               onChange={setSelectedVehicle}
-            >
-              <Combobox.Target>
-                <TextInput
-                  required
-                  label="Araç"
-                  placeholder="Araç seçin"
-                  value={vehicleOptions.find(v => v.value === selectedVehicle)?.label || ''}
-                  onChange={(event) => {
-                    const vehicle = vehicleOptions.find(v => v.label.toLowerCase().includes(event.currentTarget.value.toLowerCase()))
-                    if (vehicle) {
-                      setSelectedVehicle(vehicle.value)
-                    }
-                  }}
-                  onClick={() => fetchVehicles()}
-                  rightSection={<Combobox.Chevron />}
-                />
-              </Combobox.Target>
-
-              <Combobox.Dropdown>
-                <Combobox.Options>
-                  {vehicleOptions.map((vehicle) => (
-                    <Combobox.Option value={vehicle.value} key={vehicle.value}>
-                      {vehicle.label}
-                    </Combobox.Option>
-                  ))}
-                </Combobox.Options>
-                <Combobox.Empty>Araç bulunamadı</Combobox.Empty>
-              </Combobox.Dropdown>
-            </Combobox>
+              data={vehicleOptions}
+              searchable
+              nothingFoundMessage="Araç bulunamadı"
+              onDropdownOpen={fetchVehicles}
+            />
 
             <Group grow>
               <NumberInput

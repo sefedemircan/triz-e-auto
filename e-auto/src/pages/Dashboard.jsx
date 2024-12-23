@@ -87,12 +87,22 @@ export default function Dashboard() {
     try {
       // Araç istatistikleri
       const { data: vehicles } = await supabase.from("vehicles").select("*");
-
       const { data: employees } = await supabase.from("employees").select("*");
 
-      const { data: expenses } = await supabase
+      // Araç giderleri
+      const { data: vehicleExpenses } = await supabase
         .from("vehicle_expenses")
-        .select("*");
+        .select("*")
+        .not('expense_type', 'eq', 'salary')
+        .not('expense_type', 'eq', 'insurance_payment')
+        .not('expense_type', 'eq', 'bonus')
+        .not('expense_type', 'eq', 'food_allowance');
+
+      // Personel giderleri
+      const { data: staffExpenses } = await supabase
+        .from("vehicle_expenses")
+        .select("*")
+        .in('expense_type', ['salary', 'insurance_payment', 'bonus', 'food_allowance']);
 
       // Bu ayın başlangıç ve bitiş tarihleri
       const startOfMonth = dayjs().startOf("month").format("YYYY-MM-DD");
@@ -116,11 +126,10 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
         .limit(5);
 
-      // Yaklaşan maaş ödemeleri - sadece maaş tutarları
+      // Yaklaşan maaş ödemeleri
       const upcomingSalaries = employees
         .map((employee) => {
           const nextPaymentDate = dayjs().date(employee.salary_day);
-          // Eğer bu ayki ödeme günü geçtiyse, gelecek ayın tarihini hesapla
           const paymentDate = nextPaymentDate.isBefore(dayjs())
             ? nextPaymentDate.add(1, "month")
             : nextPaymentDate;
@@ -131,7 +140,6 @@ export default function Dashboard() {
             salary: employee.salary || 0,
             insurance: employee.insurance_amount || 0,
             foodAllowance: employee.food_allowance || 0,
-            // Her ödeme türü için ayrı alanlar
             paymentDetails: [
               { label: "Maaş", amount: employee.salary || 0 },
               { label: "SGK", amount: employee.insurance_amount || 0 },
@@ -139,26 +147,28 @@ export default function Dashboard() {
             ],
           };
         })
-        .sort((a, b) => dayjs(a.nextPayment).diff(dayjs(b.nextPayment))); // Tarihe göre sırala
+        .sort((a, b) => dayjs(a.nextPayment).diff(dayjs(b.nextPayment)));
 
       // Toplam gelir hesaplama (satılan araçların satış fiyatları toplamı)
       const totalRevenue = vehicles
         .filter((v) => v.status === "sold")
         .reduce((sum, v) => sum + (v.sale_price || 0), 0);
 
-      // Toplam gider hesaplama
-      const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+      // Toplam gider hesaplama (araç giderleri + personel giderleri)
+      const totalVehicleExpenses = vehicleExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+      const totalStaffExpenses = staffExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
       setStats({
         totalVehicles: vehicles.length,
-        availableVehicles: vehicles.filter((v) => v.status === "available")
-          .length,
+        availableVehicles: vehicles.filter((v) => v.status === "available").length,
         soldVehicles: vehicles.filter((v) => v.status === "sold").length,
         totalEmployees: employees.length,
         totalRevenue: totalRevenue,
-        totalExpenses: totalExpenses,
-        totalProfit: totalRevenue - totalExpenses, // Yeni kar hesaplaması
-        monthlyExpenses: expenses
+        totalVehicleExpenses: totalVehicleExpenses,
+        totalStaffExpenses: totalStaffExpenses,
+        totalExpenses: totalVehicleExpenses + totalStaffExpenses,
+        totalProfit: totalRevenue - (totalVehicleExpenses + totalStaffExpenses),
+        monthlyExpenses: vehicleExpenses
           .filter(
             (exp) =>
               exp.expense_date >= startOfMonth && exp.expense_date <= endOfMonth
@@ -201,6 +211,10 @@ export default function Dashboard() {
             model:model_id(name)
           )
         `)
+        .not('expense_type', 'eq', 'salary')
+        .not('expense_type', 'eq', 'insurance_payment')
+        .not('expense_type', 'eq', 'bonus')
+        .not('expense_type', 'eq', 'food_allowance')
         .order('expense_date', { ascending: false })
 
       if (expensesError) throw expensesError
@@ -215,6 +229,8 @@ export default function Dashboard() {
           maintenance: 0,
           repair: 0,
           insurance: 0,
+          tax: 0,
+          fuel: 0,
           other: 0,
         }
       )

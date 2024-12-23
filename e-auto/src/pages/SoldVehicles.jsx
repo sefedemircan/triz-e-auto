@@ -75,7 +75,11 @@ export default function SoldVehicles() {
 
       const { data, error } = await supabase
         .from('vehicles')
-        .select('*')
+        .select(`
+          *,
+          brand:brand_id(name),
+          model:model_id(name)
+        `)
         .eq('status', 'sold')
         .order('sale_date', { ascending: false })
 
@@ -96,7 +100,7 @@ export default function SoldVehicles() {
   const rows = vehicles.map((vehicle) => (
     <Table.Tr key={vehicle.id}>
       <Table.Td ta="center">{vehicle.plate}</Table.Td>
-      <Table.Td ta="center">{vehicle.brand} {vehicle.model}</Table.Td>
+      <Table.Td ta="center">{vehicle.brand?.name} {vehicle.model?.name}</Table.Td>
       <Table.Td ta="center">{vehicleTypeLabels[vehicle.type]}</Table.Td>
       <Table.Td ta="center">{fuelTypeLabels[vehicle.fuel_type]}</Table.Td>
       <Table.Td ta="center">{vehicle.year}</Table.Td>

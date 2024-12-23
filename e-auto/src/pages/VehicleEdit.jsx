@@ -47,19 +47,7 @@ export default function VehicleEdit() {
   const [loading, setLoading] = useState(true)
   const [photos, setPhotos] = useState([])
   const [uploadedPhotos, setUploadedPhotos] = useState([])
-  const [formData, setFormData] = useState({
-    brand: '',
-    model: '',
-    year: new Date().getFullYear(),
-    type: '',
-    fuel_type: '',
-    plate: '',
-    chassis_number: '',
-    purchase_price: 0,
-    purchase_date: '',
-    description: '',
-    status: '',
-  })
+  const [formData, setFormData] = useState(null)
 
   useEffect(() => {
     fetchVehicle()
@@ -198,158 +186,160 @@ export default function VehicleEdit() {
     <Paper p="md" radius="md" withBorder pos="relative">
       <LoadingOverlay visible={loading} />
       
-      <form onSubmit={handleSubmit}>
-        <Stack spacing="md">
-          <Text size="xl" weight={500}>Araç Düzenle</Text>
+      {formData && (
+        <form onSubmit={handleSubmit}>
+          <Stack spacing="md">
+            <Text size="xl" weight={500}>Araç Düzenle</Text>
 
-          <SimpleGrid cols={2}>
+            <SimpleGrid cols={2}>
+              <TextInput
+                required
+                label="Marka"
+                value={formData.brand}
+                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+              />
+
+              <TextInput
+                required
+                label="Model"
+                value={formData.model}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+              />
+            </SimpleGrid>
+
+            <SimpleGrid cols={3}>
+              <NumberInput
+                required
+                label="Yıl"
+                value={formData.year}
+                onChange={(value) => setFormData({ ...formData, year: value })}
+                min={1900}
+                max={new Date().getFullYear()}
+              />
+
+              <Select
+                required
+                label="Araç Tipi"
+                data={vehicleTypes}
+                value={formData.type}
+                onChange={(value) => setFormData({ ...formData, type: value })}
+              />
+
+              <Select
+                required
+                label="Yakıt Tipi"
+                data={fuelTypes}
+                value={formData.fuel_type}
+                onChange={(value) => setFormData({ ...formData, fuel_type: value })}
+              />
+            </SimpleGrid>
+
+            <SimpleGrid cols={3}>
+              <TextInput
+                required
+                label="Plaka"
+                value={formData.plate}
+                onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
+              />
+
+              <TextInput
+                required
+                label="Şasi Numarası"
+                value={formData.chassis_number}
+                onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
+              />
+
+              <Select
+                required
+                label="Durum"
+                data={statusTypes}
+                value={formData.status}
+                onChange={(value) => setFormData({ ...formData, status: value })}
+              />
+            </SimpleGrid>
+
+            <SimpleGrid cols={2}>
+              <NumberInput
+                required
+                label="Alış Fiyatı"
+                value={formData.purchase_price}
+                onChange={(value) => setFormData({ ...formData, purchase_price: value })}
+                min={0}
+                precision={2}
+                thousandSeparator=","
+              />
+
+              <TextInput
+                required
+                type="date"
+                label="Alış Tarihi"
+                value={formData.purchase_date}
+                onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+              />
+            </SimpleGrid>
+
             <TextInput
-              required
-              label="Marka"
-              value={formData.brand}
-              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+              label="Açıklama"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
 
-            <TextInput
-              required
-              label="Model"
-              value={formData.model}
-              onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-            />
-          </SimpleGrid>
+            <Stack spacing="xs">
+              <FileInput
+                label="Fotoğraflar"
+                placeholder="Fotoğraf seçin"
+                accept="image/*"
+                multiple
+                icon={<IconUpload size={14} />}
+                onChange={handlePhotoUpload}
+              />
 
-          <SimpleGrid cols={3}>
-            <NumberInput
-              required
-              label="Yıl"
-              value={formData.year}
-              onChange={(value) => setFormData({ ...formData, year: value })}
-              min={1900}
-              max={new Date().getFullYear()}
-            />
+              {photos.length > 0 && (
+                <SimpleGrid cols={4} spacing="xs">
+                  {photos.map((photo, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <Image
+                        src={photo}
+                        radius="md"
+                        alt={`Araç fotoğrafı ${index + 1}`}
+                        style={{ aspectRatio: '16/9', objectFit: 'cover' }}
+                      />
+                      <ActionIcon
+                        color="red"
+                        variant="filled"
+                        size="sm"
+                        style={{
+                          position: 'absolute',
+                          top: 5,
+                          right: 5,
+                        }}
+                        onClick={() => handlePhotoRemove(index)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </div>
+                  ))}
+                </SimpleGrid>
+              )}
+            </Stack>
 
-            <Select
-              required
-              label="Araç Tipi"
-              data={vehicleTypes}
-              value={formData.type}
-              onChange={(value) => setFormData({ ...formData, type: value })}
-            />
-
-            <Select
-              required
-              label="Yakıt Tipi"
-              data={fuelTypes}
-              value={formData.fuel_type}
-              onChange={(value) => setFormData({ ...formData, fuel_type: value })}
-            />
-          </SimpleGrid>
-
-          <SimpleGrid cols={3}>
-            <TextInput
-              required
-              label="Plaka"
-              value={formData.plate}
-              onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
-            />
-
-            <TextInput
-              required
-              label="Şasi Numarası"
-              value={formData.chassis_number}
-              onChange={(e) => setFormData({ ...formData, chassis_number: e.target.value })}
-            />
-
-            <Select
-              required
-              label="Durum"
-              data={statusTypes}
-              value={formData.status}
-              onChange={(value) => setFormData({ ...formData, status: value })}
-            />
-          </SimpleGrid>
-
-          <SimpleGrid cols={2}>
-            <NumberInput
-              required
-              label="Alış Fiyatı"
-              value={formData.purchase_price}
-              onChange={(value) => setFormData({ ...formData, purchase_price: value })}
-              min={0}
-              precision={2}
-              thousandSeparator=","
-            />
-
-            <TextInput
-              required
-              type="date"
-              label="Alış Tarihi"
-              value={formData.purchase_date}
-              onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-            />
-          </SimpleGrid>
-
-          <TextInput
-            label="Açıklama"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-
-          <Stack spacing="xs">
-            <FileInput
-              label="Fotoğraflar"
-              placeholder="Fotoğraf seçin"
-              accept="image/*"
-              multiple
-              icon={<IconUpload size={14} />}
-              onChange={handlePhotoUpload}
-            />
-
-            {photos.length > 0 && (
-              <SimpleGrid cols={4} spacing="xs">
-                {photos.map((photo, index) => (
-                  <div key={index} style={{ position: 'relative' }}>
-                    <Image
-                      src={photo}
-                      radius="md"
-                      alt={`Araç fotoğrafı ${index + 1}`}
-                      style={{ aspectRatio: '16/9', objectFit: 'cover' }}
-                    />
-                    <ActionIcon
-                      color="red"
-                      variant="filled"
-                      size="sm"
-                      style={{
-                        position: 'absolute',
-                        top: 5,
-                        right: 5,
-                      }}
-                      onClick={() => handlePhotoRemove(index)}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </div>
-                ))}
-              </SimpleGrid>
-            )}
+            <Group position="right" mt="md">
+              <Button
+                variant="subtle"
+                onClick={() => navigate('/vehicles')}
+              >
+                İptal
+              </Button>
+              <Button
+                type="submit"
+                loading={loading}
+              >
+                Kaydet
+              </Button>
+            </Group>
           </Stack>
-
-          <Group position="right" mt="md">
-            <Button
-              variant="subtle"
-              onClick={() => navigate('/vehicles')}
-            >
-              İptal
-            </Button>
-            <Button
-              type="submit"
-              loading={loading}
-            >
-              Kaydet
-            </Button>
-          </Group>
-        </Stack>
-      </form>
+        </form>
+      )}
     </Paper>
   )
 } 

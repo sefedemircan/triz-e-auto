@@ -37,7 +37,11 @@ export default function FinancialReport() {
       // Gelirleri al (araç satışları)
       const { data: salesData, error: salesError } = await supabase
         .from('vehicles')
-        .select('*')
+        .select(`
+          *,
+          brand:brand_id(name),
+          model:model_id(name)
+        `)
         .eq('status', 'sold')
         .order('sale_date', { ascending: false })
 
@@ -46,7 +50,15 @@ export default function FinancialReport() {
       // Giderleri al
       const { data: expensesData, error: expensesError } = await supabase
         .from('vehicle_expenses')
-        .select('*')
+        .select(`
+          *,
+          vehicle:vehicle_id (
+            id,
+            plate,
+            brand:brand_id(name),
+            model:model_id(name)
+          )
+        `)
         .order('expense_date', { ascending: false })
 
       if (expensesError) throw expensesError
@@ -172,7 +184,7 @@ export default function FinancialReport() {
                 {incomes.map((income) => (
                   <tr key={income.id}>
                     <td>{dayjs(income.sale_date).format('DD.MM.YYYY')}</td>
-                    <td>{income.brand} {income.model}</td>
+                    <td>{income.brand?.name} {income.model?.name}</td>
                     <td>{income.sale_price.toLocaleString('tr-TR')} ₺</td>
                   </tr>
                 ))}
