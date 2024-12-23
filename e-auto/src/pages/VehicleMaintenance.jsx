@@ -193,7 +193,7 @@ export default function VehicleMaintenance() {
         .from('vehicle_expenses')
         .insert({
           vehicle_id: selectedVehicle,
-          expense_type: formData.expense_type,
+          expense_type: activeTab,
           amount: parseFloat(formData.amount),
           description: formData.description.trim(),
           expense_date: dayjs(formData.expense_date).format('YYYY-MM-DD'),

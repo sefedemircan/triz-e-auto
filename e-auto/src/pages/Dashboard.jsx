@@ -39,6 +39,16 @@ const EXPENSE_TYPES = {
     color: "green",
     icon: IconShieldCheck,
   },
+  tax: {
+    label: "Vergi",
+    color: "yellow",
+    icon: IconReceipt,
+  },
+  fuel: {
+    label: "Yakıt",
+    color: "orange",
+    icon: IconReceipt,
+  },
   other: {
     label: "Diğer",
     color: "gray",
@@ -155,8 +165,8 @@ export default function Dashboard() {
         .reduce((sum, v) => sum + (v.sale_price || 0), 0);
 
       // Toplam gider hesaplama (araç giderleri + personel giderleri)
-      const totalVehicleExpenses = vehicleExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-      const totalStaffExpenses = staffExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+      const totalVehicleExpenses = vehicleExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const totalStaffExpenses = staffExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
       setStats({
         totalVehicles: vehicles.length,
@@ -173,7 +183,7 @@ export default function Dashboard() {
             (exp) =>
               exp.expense_date >= startOfMonth && exp.expense_date <= endOfMonth
           )
-          .reduce((sum, exp) => sum + exp.amount, 0),
+          .reduce((sum, exp) => sum + (exp.amount || 0), 0),
         monthlySales: vehicles
           .filter(
             (v) =>
@@ -181,7 +191,7 @@ export default function Dashboard() {
               v.sale_date >= startOfMonth &&
               v.sale_date <= endOfMonth
           )
-          .reduce((sum, v) => sum + (v.sale_price - v.purchase_price), 0),
+          .reduce((sum, v) => sum + ((v.sale_price || 0) - (v.purchase_price || 0)), 0),
         recentSales,
         upcomingSalaries,
       });
@@ -211,10 +221,11 @@ export default function Dashboard() {
             model:model_id(name)
           )
         `)
-        .not('expense_type', 'eq', 'salary')
-        .not('expense_type', 'eq', 'insurance_payment')
-        .not('expense_type', 'eq', 'bonus')
-        .not('expense_type', 'eq', 'food_allowance')
+        .in('expense_type', Object.keys(EXPENSE_TYPES))
+        .not('description', 'ilike', '%SGK%')
+        .not('description', 'ilike', '%Maaş%')
+        .not('description', 'ilike', '%Sigorta Ödemesi%')
+        .not('description', 'ilike', '%Yemek%')
         .order('expense_date', { ascending: false })
 
       if (expensesError) throw expensesError
@@ -222,7 +233,9 @@ export default function Dashboard() {
       // Gider tipine göre toplam tutarlar
       const expensesByType = expenses.reduce(
         (acc, expense) => {
-          acc[expense.expense_type] = (acc[expense.expense_type] || 0) + expense.amount
+          if (EXPENSE_TYPES[expense.expense_type]) {
+            acc[expense.expense_type] = (acc[expense.expense_type] || 0) + (expense.amount || 0)
+          }
           return acc
         },
         {
@@ -236,7 +249,7 @@ export default function Dashboard() {
       )
 
       setMaintenanceStats({
-        totalExpenses: expenses.reduce((sum, exp) => sum + exp.amount, 0),
+        totalExpenses: expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0),
         recentExpenses: expenses.slice(0, 10),
         expensesByType,
       })
@@ -295,6 +308,11 @@ export default function Dashboard() {
             model:model_id(name)
           )
         `)
+        .in('expense_type', Object.keys(EXPENSE_TYPES))
+        .not('description', 'ilike', '%SGK%')
+        .not('description', 'ilike', '%Maaş%')
+        .not('description', 'ilike', '%Sigorta Ödemesi%')
+        .not('description', 'ilike', '%Yemek%')
         .order('expense_date', { ascending: false })
         .limit(10)
 
@@ -302,6 +320,11 @@ export default function Dashboard() {
       setRecentExpenses(data || [])
     } catch (error) {
       console.error('Error fetching recent expenses:', error)
+      notifications.show({
+        title: 'Hata',
+        message: 'Son giderler yüklenirken bir hata oluştu',
+        color: 'red',
+      })
     }
   }
 
@@ -380,7 +403,7 @@ export default function Dashboard() {
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">
-                {stats.totalRevenue.toLocaleString("tr-TR")} ₺
+                {(stats.totalRevenue || 0).toLocaleString("tr-TR")} ₺
               </Badge>
             </Group>
             <Text size="sm" color="dimmed">
@@ -394,7 +417,7 @@ export default function Dashboard() {
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">
-                {stats.totalExpenses.toLocaleString("tr-TR")} ₺
+                {(stats.totalExpenses || 0).toLocaleString("tr-TR")} ₺
               </Badge>
             </Group>
             <Text size="sm" color="dimmed">
@@ -408,7 +431,7 @@ export default function Dashboard() {
             <Group position="apart" mb="xs">
               <IconCar size={24} color="#4c6ef5" />
               <Badge size="lg">
-                {stats.totalProfit.toLocaleString("tr-TR")} ₺
+                {(stats.totalProfit || 0).toLocaleString("tr-TR")} ₺
               </Badge>
             </Group>
             <Text size="sm" color="dimmed">
@@ -439,7 +462,7 @@ export default function Dashboard() {
                   </Group>
                 </Stack>
                 <Badge color="green" size="lg" variant="light">
-                  {(sale.sale_price - sale.purchase_price).toLocaleString(
+                  {((sale.sale_price || 0) - (sale.purchase_price || 0)).toLocaleString(
                     "tr-TR"
                   )}{" "}
                   ₺
@@ -475,7 +498,7 @@ export default function Dashboard() {
                             {payment.label}:
                           </Text>
                           <Text size="sm" weight={500}>
-                            {payment.amount.toLocaleString("tr-TR")} ₺
+                            {(payment.amount || 0).toLocaleString("tr-TR")} ₺
                           </Text>
                         </Group>
                       )
@@ -518,7 +541,7 @@ export default function Dashboard() {
                     </ThemeIcon>
                   </Group>
                   <Text size="xl" weight={700} color="red">
-                    {maintenanceStats.totalExpenses.toLocaleString("tr-TR")} ₺
+                    {(maintenanceStats.totalExpenses || 0).toLocaleString("tr-TR")} ₺
                   </Text>
                 </Paper>
               </Grid.Col>
@@ -534,13 +557,13 @@ export default function Dashboard() {
                     </ThemeIcon>
                   </Group>
                   <Text size="xl" weight={700} color="orange">
-                    {maintenanceStats.recentExpenses
-                      .filter(
+                    {(maintenanceStats.recentExpenses
+                      ?.filter(
                         (exp) =>
                           dayjs(exp.expense_date).format("MM-YYYY") ===
                           dayjs().format("MM-YYYY")
                       )
-                      .reduce((sum, exp) => sum + exp.amount, 0)
+                      ?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0)
                       .toLocaleString("tr-TR")}{" "}
                     ₺
                   </Text>
@@ -564,7 +587,7 @@ export default function Dashboard() {
                           </ThemeIcon>
                         </Group>
                         <Text size="xl" weight={700} color={color}>
-                          {amount.toLocaleString("tr-TR")} ₺
+                          {(amount || 0).toLocaleString("tr-TR")} ₺
                         </Text>
                       </Paper>
                     </Grid.Col>
@@ -616,17 +639,23 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td>
-                        <Badge
-                          color={EXPENSE_TYPES[expense.expense_type].color}
-                          variant="light"
-                        >
-                          {EXPENSE_TYPES[expense.expense_type].label}
-                        </Badge>
+                        {EXPENSE_TYPES[expense.expense_type] ? (
+                          <Badge
+                            color={EXPENSE_TYPES[expense.expense_type].color}
+                            variant="light"
+                          >
+                            {EXPENSE_TYPES[expense.expense_type].label}
+                          </Badge>
+                        ) : (
+                          <Badge color="gray" variant="light">
+                            {expense.expense_type}
+                          </Badge>
+                        )}
                       </td>
                       <td>{expense.description}</td>
                       <td>
                         <Text weight={500} color="red">
-                          {expense.amount.toLocaleString("tr-TR")} ₺
+                          {expense.amount?.toLocaleString("tr-TR")} ₺
                         </Text>
                       </td>
                     </tr>
