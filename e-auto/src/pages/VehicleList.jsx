@@ -20,11 +20,10 @@ import {
 import { notifications } from '@mantine/notifications'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { IconPlus, IconEdit, IconTrash, IconCar, IconCurrencyLira } from '@tabler/icons-react'
+import { IconPlus, IconEdit, IconTrash, IconCar, IconCurrencyLira, IconEye } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { DateInput } from '@mantine/dates'
 import { confirmModal } from '../utils/confirmModal'
-import { vehicleBrands } from '../data/vehicleData'
 
 const vehicleTypeLabels = {
   car: 'Otomobil',
@@ -55,17 +54,6 @@ const formatPrice = (price) => {
   }).format(price)
 }
 
-const getBrandLabel = (brandValue, type) => {
-  const brand = vehicleBrands[type]?.find(b => b.value === brandValue)
-  return brand?.label || brandValue
-}
-
-const getModelLabel = (modelValue, type, brandValue) => {
-  const brand = vehicleBrands[type]?.find(b => b.value === brandValue)
-  const model = brand?.models?.find(m => m.value === modelValue)
-  return model?.label || modelValue
-}
-
 export default function VehicleList() {
   const navigate = useNavigate()
   const [vehicles, setVehicles] = useState([])
@@ -93,17 +81,22 @@ export default function VehicleList() {
   }, [])
 
   const fetchVehicles = async () => {
+    setLoading(true)
     try {
       const { data, error } = await supabase
         .from('vehicles')
-        .select('*')
-        .eq('status', 'available')
+        .select(`
+          *,
+          brand:brand_id(id, name),
+          model:model_id(id, name)
+        `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      setVehicles(data)
+      setVehicles(data || [])
     } catch (error) {
+      console.error('Error fetching vehicles:', error)
       notifications.show({
         title: 'Hata',
         message: 'Araçlar yüklenirken bir hata oluştu',
@@ -161,7 +154,11 @@ export default function VehicleList() {
   }
 
   const handleSellClick = (vehicle) => {
-    setSelectedVehicle(vehicle)
+    setSelectedVehicle({
+      ...vehicle,
+      brand: vehicle.brand?.name,
+      model: vehicle.model?.name
+    })
     setSaleForm({
       price: 0,
       date: new Date(),
@@ -272,7 +269,7 @@ export default function VehicleList() {
               <Group position="apart">
                 <Group spacing="xs">
                   <Text size="lg" weight={500}>
-                    {getBrandLabel(vehicle.brand, vehicle.type)} {getModelLabel(vehicle.model, vehicle.type, vehicle.brand)}
+                    {vehicle.brand?.name} {vehicle.series || vehicle.model?.name}
                   </Text>
                   <Badge color={statusLabels[vehicle.status].color}>
                     {statusLabels[vehicle.status].label}
@@ -338,7 +335,7 @@ export default function VehicleList() {
             </Text>
             {selectedVehicle && (
               <Text size="sm" color="dimmed">
-                {selectedVehicle.brand} {selectedVehicle.model} - {selectedVehicle.plate}
+                {selectedVehicle.brand?.name} {selectedVehicle.series || selectedVehicle.model?.name} - {selectedVehicle.plate}
               </Text>
             )}
           </Stack>

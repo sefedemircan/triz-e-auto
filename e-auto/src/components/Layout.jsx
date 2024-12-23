@@ -27,6 +27,7 @@ import {
   IconMoon,
   IconTool,
   IconCash,
+  IconDatabase,
 } from '@tabler/icons-react'
 
 const mainLinks = [
@@ -47,6 +48,12 @@ const mainLinks = [
     color: 'violet', 
     label: 'Kasa Yönetimi', 
     to: '/cash' 
+  },
+  { 
+    icon: IconDatabase, 
+    color: 'grape', 
+    label: 'Araç Verileri', 
+    to: '/admin/vehicle-data' 
   },
 ]
 
@@ -114,6 +121,7 @@ export default function Layout({ children }) {
       case '/financial-report': return 'Finansal raporlar ve analizler'
       case '/maintenance': return 'Bakım ve giderler'
       case '/cash': return 'Kasa yönetimi'
+      case '/admin/vehicle-data': return 'Araç verileri yönetimi'
       default: return ''
     }
   }

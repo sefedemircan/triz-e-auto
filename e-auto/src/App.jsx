@@ -19,6 +19,7 @@ import VehicleEdit from './pages/VehicleEdit'
 import { useLocalStorage } from '@mantine/hooks'
 import VehicleMaintenance from './pages/VehicleMaintenance'
 import CashManagement from './pages/CashManagement'
+import VehicleDataManager from './pages/admin/VehicleDataManager'
 
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
@@ -191,6 +192,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <CashManagement />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/vehicle-data"
+                  element={
+                    <ProtectedRoute>
+                      <VehicleDataManager />
                     </ProtectedRoute>
                   }
                 />
