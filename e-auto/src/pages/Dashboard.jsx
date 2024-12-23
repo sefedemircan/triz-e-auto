@@ -73,9 +73,14 @@ export default function Dashboard() {
     },
   });
 
+  const [recentSales, setRecentSales] = useState([]);
+  const [recentExpenses, setRecentExpenses] = useState([]);
+
   useEffect(() => {
     fetchDashboardData();
     fetchMaintenanceStats();
+    fetchRecentSales();
+    fetchRecentExpenses();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -95,10 +100,20 @@ export default function Dashboard() {
 
       // Son satışlar (son 5)
       const { data: recentSales } = await supabase
-        .from("vehicles")
-        .select("*")
-        .eq("status", "sold")
-        .order("sale_date", { ascending: false })
+        .from('vehicles')
+        .select(`
+          id,
+          plate,
+          brand_id,
+          model_id,
+          sale_date,
+          sale_price,
+          purchase_price,
+          brand:brand_id(name),
+          model:model_id(name)
+        `)
+        .eq('status', 'sold')
+        .order('created_at', { ascending: false })
         .limit(5);
 
       // Yaklaşan maaş ödemeleri - sadece maaş tutarları
@@ -172,56 +187,107 @@ export default function Dashboard() {
   const fetchMaintenanceStats = async () => {
     try {
       const { data: expenses, error: expensesError } = await supabase
-        .from("vehicle_expenses")
-        .select(
-          `
-          *,
-          vehicle:vehicles (
-            brand,
-            model,
-            plate
+        .from('vehicle_expenses')
+        .select(`
+          id,
+          expense_type,
+          amount,
+          description,
+          expense_date,
+          vehicle:vehicle_id(
+            id,
+            plate,
+            brand:brand_id(name),
+            model:model_id(name)
           )
-        `
-        )
-        .order("expense_date", { ascending: false })
-        .limit(10);
+        `)
+        .order('expense_date', { ascending: false })
 
-      if (expensesError) throw expensesError;
+      if (expensesError) throw expensesError
 
-      const recentExpenses = expenses;
-
-      // Gider tipine göre toplam tutarlar - sadece araç giderleri
-      const expensesByType = expenses
-        .filter((exp) => exp.vehicle_id !== null) // Sadece araç giderlerini filtrele
-        .reduce(
-          (acc, expense) => {
-            acc[expense.expense_type] =
-              (acc[expense.expense_type] || 0) + expense.amount;
-            return acc;
-          },
-          {
-            maintenance: 0,
-            repair: 0,
-            insurance: 0,
-            other: 0,
-          }
-        );
+      // Gider tipine göre toplam tutarlar
+      const expensesByType = expenses.reduce(
+        (acc, expense) => {
+          acc[expense.expense_type] = (acc[expense.expense_type] || 0) + expense.amount
+          return acc
+        },
+        {
+          maintenance: 0,
+          repair: 0,
+          insurance: 0,
+          other: 0,
+        }
+      )
 
       setMaintenanceStats({
-        totalExpenses: expenses
-          .filter((exp) => exp.vehicle_id !== null) // Sadece araç giderlerinin toplamı
-          .reduce((sum, exp) => sum + exp.amount, 0),
-        recentExpenses: expenses.filter((exp) => exp.vehicle_id !== null), // Sadece araç giderlerini göster
+        totalExpenses: expenses.reduce((sum, exp) => sum + exp.amount, 0),
+        recentExpenses: expenses.slice(0, 10),
         expensesByType,
-      });
+      })
     } catch (error) {
+      console.error('Error fetching maintenance stats:', error)
       notifications.show({
-        title: "Hata",
-        message: "Bakım istatistikleri yüklenirken bir hata oluştu",
-        color: "red",
-      });
+        title: 'Hata',
+        message: 'Bakım istatistikleri yüklenirken bir hata oluştu',
+        color: 'red',
+      })
     }
-  };
+  }
+
+  // Satılan araçları getir
+  const fetchRecentSales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select(`
+          id,
+          plate,
+          brand_id,
+          model_id,
+          sale_date,
+          sale_price,
+          purchase_price,
+          brand:brand_id(name),
+          model:model_id(name)
+        `)
+        .eq('status', 'sold')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (error) throw error
+      setRecentSales(data || [])
+    } catch (error) {
+      console.error('Error fetching recent sales:', error)
+    }
+  }
+
+  // Son giderleri getir
+  const fetchRecentExpenses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicle_expenses')
+        .select(`
+          id,
+          expense_type,
+          amount,
+          description,
+          expense_date,
+          vehicle:vehicle_id(
+            id,
+            plate,
+            brand:brand_id(name),
+            model:model_id(name)
+          )
+        `)
+        .order('expense_date', { ascending: false })
+        .limit(10)
+
+      if (error) throw error
+      setRecentExpenses(data || [])
+    } catch (error) {
+      console.error('Error fetching recent expenses:', error)
+    }
+  }
 
   // En yüksek gider kategorisini hesaplayan fonksiyon
   const getMaxExpenseType = () => {
@@ -343,11 +409,11 @@ export default function Dashboard() {
               <Text weight={500}>Son Satışlar</Text>
               <Badge variant="dot">Son 5 Satış</Badge>
             </Group>
-            {stats.recentSales.map((sale) => (
+            {recentSales?.map((sale) => (
               <Group key={sale.id} position="apart" mb="md">
                 <Stack spacing={4}>
                   <Text weight={500}>
-                    {sale.brand} {sale.model}
+                    {sale.brand?.name} {sale.model?.name}
                   </Text>
                   <Group spacing={6}>
                     <IconCalendar size={14} />
@@ -506,7 +572,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody style={{ textAlign: "center" }}>
-                  {maintenanceStats.recentExpenses.map((expense) => (
+                  {recentExpenses?.map((expense) => (
                     <tr key={expense.id}>
                       <td>
                         {dayjs(expense.expense_date).format("DD.MM.YYYY")}
@@ -514,7 +580,7 @@ export default function Dashboard() {
                       <td>
                         {expense.vehicle ? (
                           <Text size="sm">
-                            {expense.vehicle.brand} {expense.vehicle.model}
+                            {expense.vehicle.brand?.name} {expense.vehicle.model?.name}
                           </Text>
                         ) : (
                           <Text size="sm" color="dimmed">
@@ -553,7 +619,7 @@ export default function Dashboard() {
               </Table>
             </Paper>
 
-            {maintenanceStats.recentExpenses.length === 0 && (
+            {recentExpenses?.length === 0 && (
               <Text color="dimmed" align="center" mt="md">
                 Henüz gider kaydı bulunmuyor
               </Text>

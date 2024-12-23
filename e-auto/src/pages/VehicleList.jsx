@@ -87,9 +87,10 @@ export default function VehicleList() {
         .from('vehicles')
         .select(`
           *,
-          brand:brand_id(id, name),
-          model:model_id(id, name)
+          brand:brand_id(name),
+          model:model_id(name)
         `)
+        .eq('status', 'available')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -154,11 +155,7 @@ export default function VehicleList() {
   }
 
   const handleSellClick = (vehicle) => {
-    setSelectedVehicle({
-      ...vehicle,
-      brand: vehicle.brand?.name,
-      model: vehicle.model?.name
-    })
+    setSelectedVehicle(vehicle)
     setSaleForm({
       price: 0,
       date: new Date(),
@@ -180,20 +177,34 @@ export default function VehicleList() {
         throw new Error('Alıcı adını girin')
       }
 
-      const { error } = await supabase
-        .from('vehicles')
-        .update({ 
-          status: 'sold',
-          sale_date: dayjs(saleForm.date).format('YYYY-MM-DD'),
-          sale_price: saleForm.price,
-          buyer_name: saleForm.buyer_name,
-          buyer_phone: saleForm.buyer_phone,
-          payment_method: saleForm.payment_method,
-          sale_notes: saleForm.notes
-        })
-        .eq('id', selectedVehicle.id)
+      // Debug için
+      console.log('Selected Vehicle:', selectedVehicle)
+      console.log('Sale Form:', saleForm)
 
-      if (error) throw error
+      const updateData = {
+        status: 'sold',
+        sale_date: dayjs(saleForm.date).format('YYYY-MM-DD'),
+        sale_price: parseFloat(saleForm.price),
+        buyer_name: saleForm.buyer_name.trim(),
+        buyer_phone: saleForm.buyer_phone.trim(),
+        payment_method: saleForm.payment_method,
+        sale_notes: saleForm.notes?.trim() || null
+      }
+
+      console.log('Update Data:', updateData)
+
+      const { data, error } = await supabase
+        .from('vehicles')
+        .update(updateData)
+        .eq('id', selectedVehicle.id)
+        .select()
+
+      if (error) {
+        console.error('Update error:', error)
+        throw error
+      }
+
+      console.log('Updated Vehicle:', data)
 
       notifications.show({
         title: 'Başarılı',
@@ -201,10 +212,13 @@ export default function VehicleList() {
         color: 'green',
       })
 
-      // Satılan aracı listeden kaldır
-      setVehicles(vehicles.filter(v => v.id !== selectedVehicle.id))
+      // Listeyi güncelle
+      setVehicles(vehicles.map(v => 
+        v.id === selectedVehicle.id ? { ...v, ...updateData } : v
+      ))
 
       setSellModalOpen(false)
+      fetchVehicles() // Listeyi yeniden yükle
     } catch (error) {
       console.error('Sell error:', error)
       notifications.show({

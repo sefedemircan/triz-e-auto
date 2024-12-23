@@ -238,12 +238,8 @@ export default function VehicleDataManager() {
             <Stack>
               <Group position="right">
                 <Button
-                  leftIcon={<IconPlus size={18} />}
-                  onClick={() => {
-                    brandForm.reset()
-                    setEditingItem(null)
-                    setModalOpened(true)
-                  }}
+                  leftSection={<IconPlus size={14} />}
+                  onClick={() => setModalOpened(true)}
                 >
                   Yeni Marka
                 </Button>
@@ -291,12 +287,8 @@ export default function VehicleDataManager() {
             <Stack>
               <Group position="right">
                 <Button
-                  leftIcon={<IconPlus size={18} />}
-                  onClick={() => {
-                    modelForm.reset()
-                    setEditingItem(null)
-                    setModalOpened(true)
-                  }}
+                  leftSection={<IconPlus size={14} />}
+                  onClick={() => setModalOpened(true)}
                 >
                   Yeni Model
                 </Button>

@@ -15,6 +15,7 @@ import {
   Badge,
   ActionIcon,
   ThemeIcon,
+  Combobox,
 } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
@@ -57,10 +58,23 @@ const EXPENSE_TYPES = {
 
 export default function VehicleMaintenance() {
   const [vehicles, setVehicles] = useState([])
+  const [vehicleOptions, setVehicleOptions] = useState([])
   const [expenses, setExpenses] = useState([])
-  const [opened, setOpened] = useState(false)
+  const [modalOpened, setModalOpened] = useState(false)
   const [activeTab, setActiveTab] = useState('maintenance')
   const [editingExpense, setEditingExpense] = useState(null)
+  const [selectedVehicle, setSelectedVehicle] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    expense_type: activeTab,
+    amount: 0,
+    description: '',
+    expense_date: new Date(),
+    next_service_date: null,
+    next_service_km: null,
+    service_details: '',
+    warranty_end_date: null,
+  })
 
   const form = useForm({
     initialValues: {
@@ -107,38 +121,10 @@ export default function VehicleMaintenance() {
   }, [])
 
   useEffect(() => {
-    form.setFieldValue('expense_type', activeTab)
-  }, [activeTab])
-
-  useEffect(() => {
-    if (opened) {
-      const getVehicles = async () => {
-        try {
-          let query = supabase
-            .from('vehicles')
-            .select('id, brand, model, plate')
-            .order('brand')
-
-          if (!editingExpense) {
-            query = query.eq('status', 'available')
-          }
-
-          const { data, error } = await query
-
-          if (error) throw error
-          setVehicles(data)
-        } catch (error) {
-          notifications.show({
-            title: 'Hata',
-            message: 'Araçlar yüklenirken bir hata oluştu',
-            color: 'red',
-          })
-        }
-      }
-
-      getVehicles()
+    if (modalOpened) {
+      fetchVehicles()
     }
-  }, [opened, editingExpense])
+  }, [modalOpened])
 
   const fetchExpenses = async () => {
     try {
@@ -154,87 +140,65 @@ export default function VehicleMaintenance() {
           next_service_km,
           service_details,
           warranty_end_date,
-          vehicle:vehicles (
+          vehicle:vehicle_id(
             id,
-            brand,
-            model,
-            plate
+            plate,
+            brand:brand_id(name),
+            model:model_id(name)
           )
         `)
-        .not('vehicle_id', 'is', null)
         .order('expense_date', { ascending: false })
 
       if (error) throw error
-      setExpenses(data)
+      setExpenses(data || [])
     } catch (error) {
-      notifications.show({
-        title: 'Hata',
-        message: 'Giderler yüklenirken bir hata oluştu',
-        color: 'red',
-      })
+      console.error('Error fetching expenses:', error)
     }
   }
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
     try {
-      if (!values.vehicle_id) {
-        throw new Error('Lütfen bir araç seçin')
+      const expenseData = {
+        vehicle_id: selectedVehicle,
+        expense_type: formData.expense_type,
+        amount: parseFloat(formData.amount),
+        description: formData.description.trim(),
+        expense_date: dayjs(formData.expense_date).format('YYYY-MM-DD'),
+        next_service_date: formData.next_service_date ? 
+          dayjs(formData.next_service_date).format('YYYY-MM-DD') : null,
+        next_service_km: formData.next_service_km || null,
+        service_details: formData.service_details || null,
+        warranty_end_date: formData.warranty_end_date ? 
+          dayjs(formData.warranty_end_date).format('YYYY-MM-DD') : null
       }
 
-      const formData = {
-        vehicle_id: values.vehicle_id,
-        expense_type: activeTab,
-        amount: values.amount,
-        description: values.description,
-        expense_date: dayjs(values.expense_date).format('YYYY-MM-DD'),
-        next_service_date: values.next_service_date ? 
-          dayjs(values.next_service_date).format('YYYY-MM-DD') : null,
-        next_service_km: values.next_service_km || null,
-        service_details: values.service_details || null,
-        warranty_end_date: values.warranty_end_date ? 
-          dayjs(values.warranty_end_date).format('YYYY-MM-DD') : null,
-      }
+      const { error } = await supabase
+        .from('vehicle_expenses')
+        .insert([expenseData])
 
-      console.log('Gönderilen veriler:', formData)
+      if (error) throw error
 
-      if (editingExpense) {
-        const { error } = await supabase
-          .from('vehicle_expenses')
-          .update(formData)
-          .eq('id', editingExpense.id)
+      notifications.show({
+        title: 'Başarılı',
+        message: 'Gider kaydedildi',
+        color: 'green',
+      })
 
-        if (error) throw error
-
-        notifications.show({
-          title: 'Başarılı',
-          message: 'Kayıt güncellendi',
-          color: 'green',
-        })
-      } else {
-        const { error } = await supabase
-          .from('vehicle_expenses')
-          .insert([formData])
-
-        if (error) throw error
-
-        notifications.show({
-          title: 'Başarılı',
-          message: 'Yeni kayıt eklendi',
-          color: 'green',
-        })
-      }
-
-      setOpened(false)
-      form.reset()
-      setEditingExpense(null)
+      setModalOpened(false)
+      resetForm()
       fetchExpenses()
     } catch (error) {
-      console.error('Form gönderme hatası:', error)
+      console.error('Submit error:', error)
       notifications.show({
         title: 'Hata',
-        message: error.message || 'Kayıt işlemi sırasında bir hata oluştu',
+        message: error.message || 'Gider kaydedilirken bir hata oluştu',
         color: 'red',
       })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -272,6 +236,93 @@ export default function VehicleMaintenance() {
 
   const filteredExpenses = expenses.filter(expense => expense.expense_type === activeTab)
 
+  const fetchVehicles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select(`
+          id,
+          plate,
+          brand:brand_id(name),
+          model:model_id(name),
+          status
+        `)
+        .eq('status', 'available')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      let finalVehicles = [...(data || [])]
+
+      if (editingExpense?.vehicle) {
+        const existingVehicle = finalVehicles.find(v => v.id === editingExpense.vehicle.id)
+        if (!existingVehicle) {
+          finalVehicles.push({
+            id: editingExpense.vehicle.id,
+            plate: editingExpense.vehicle.plate,
+            brand: editingExpense.vehicle.brand,
+            model: editingExpense.vehicle.model
+          })
+        }
+      }
+
+      setVehicles(finalVehicles)
+
+      const options = finalVehicles.map(vehicle => ({
+        value: vehicle.id,
+        label: `${vehicle.brand?.name} ${vehicle.model?.name} - ${vehicle.plate}`
+      }))
+      setVehicleOptions(options)
+    } catch (error) {
+      console.error('Error fetching vehicles:', error)
+      notifications.show({
+        title: 'Hata',
+        message: 'Araçlar yüklenirken bir hata oluştu',
+        color: 'red',
+      })
+    }
+  }
+
+  const resetForm = () => {
+    setFormData({
+      expense_type: activeTab,
+      amount: 0,
+      description: '',
+      expense_date: new Date(),
+      next_service_date: null,
+      next_service_km: null,
+      service_details: '',
+      warranty_end_date: null,
+    })
+    setSelectedVehicle('')
+  }
+
+  const handleOpenModal = async () => {
+    setModalOpened(true)
+    await fetchVehicles()
+  }
+
+  const handleCloseModal = () => {
+    setModalOpened(false)
+    setEditingExpense(null)
+    form.reset()
+    resetForm()
+  }
+
+  const handleEdit = (expense) => {
+    setEditingExpense(expense)
+    form.setValues({
+      ...expense,
+      expense_date: new Date(expense.expense_date),
+      next_service_date: expense.next_service_date ? 
+        new Date(expense.next_service_date) : null,
+      warranty_end_date: expense.warranty_end_date ? 
+        new Date(expense.warranty_end_date) : null,
+    })
+    setSelectedVehicle(expense.vehicle.id)
+    handleOpenModal()
+  }
+
   return (
     <Stack spacing="lg">
       <Group position="apart">
@@ -283,11 +334,7 @@ export default function VehicleMaintenance() {
         </Group>
         <Button
           leftSection={<IconPlus size={20} />}
-          onClick={() => {
-            form.reset()
-            setEditingExpense(null)
-            setOpened(true)
-          }}
+          onClick={handleOpenModal}
         >
           Yeni Kayıt
         </Button>
@@ -352,18 +399,7 @@ export default function VehicleMaintenance() {
                         </td>
                         <td>
                           <Group spacing={4} position="center">
-                            <ActionIcon onClick={() => {
-                              setEditingExpense(expense)
-                              form.setValues({
-                                ...expense,
-                                expense_date: new Date(expense.expense_date),
-                                next_service_date: expense.next_service_date ? 
-                                  new Date(expense.next_service_date) : null,
-                                warranty_end_date: expense.warranty_end_date ? 
-                                  new Date(expense.warranty_end_date) : null,
-                              })
-                              setOpened(true)
-                            }}>
+                            <ActionIcon onClick={() => handleEdit(expense)}>
                               <IconEdit size={18} />
                             </ActionIcon>
                             <ActionIcon color="red" onClick={() => handleDelete(expense.id)}>
@@ -382,16 +418,13 @@ export default function VehicleMaintenance() {
       </Paper>
 
       <Modal
-        opened={opened}
-        onClose={() => {
-          setOpened(false)
-          form.reset()
-          setEditingExpense(null)
-        }}
+        opened={modalOpened}
+        onClose={handleCloseModal}
         title={
           <Group spacing="xs">
             <ThemeIcon color="blue" variant="light">
-              {EXPENSE_TYPES[activeTab].icon && React.createElement(EXPENSE_TYPES[activeTab].icon, { size: 16 })}
+              {EXPENSE_TYPES[activeTab].icon && 
+                React.createElement(EXPENSE_TYPES[activeTab].icon, { size: 16 })}
             </ThemeIcon>
             <Text>
               {editingExpense ? 'Kaydı Düzenle' : 'Yeni Kayıt'}
@@ -400,42 +433,64 @@ export default function VehicleMaintenance() {
         }
         size="lg"
       >
-        <form onSubmit={form.onSubmit(handleSubmit)}>
+        <form onSubmit={handleSubmit}>
           <Stack>
-            <Select
-              required
-              label="Araç"
-              placeholder="Araç seçiniz"
-              nothingFound="Araç bulunamadı"
-              searchable
-              clearable={false}
-              description={!editingExpense ? "Sadece satışta olan araçlar listelenir" : undefined}
-              data={vehicles.map(vehicle => ({
-                value: vehicle.id,
-                label: `${vehicle.brand} ${vehicle.model} - ${vehicle.plate}`
-              }))}
-              {...form.getInputProps('vehicle_id')}
-            />
+            <Combobox
+              value={selectedVehicle || ''}
+              onChange={setSelectedVehicle}
+            >
+              <Combobox.Target>
+                <TextInput
+                  required
+                  label="Araç"
+                  placeholder="Araç seçin"
+                  value={vehicleOptions.find(v => v.value === selectedVehicle)?.label || ''}
+                  onChange={(event) => {
+                    const vehicle = vehicleOptions.find(v => v.label.toLowerCase().includes(event.currentTarget.value.toLowerCase()))
+                    if (vehicle) {
+                      setSelectedVehicle(vehicle.value)
+                    }
+                  }}
+                  onClick={() => fetchVehicles()}
+                  rightSection={<Combobox.Chevron />}
+                />
+              </Combobox.Target>
+
+              <Combobox.Dropdown>
+                <Combobox.Options>
+                  {vehicleOptions.map((vehicle) => (
+                    <Combobox.Option value={vehicle.value} key={vehicle.value}>
+                      {vehicle.label}
+                    </Combobox.Option>
+                  ))}
+                </Combobox.Options>
+                <Combobox.Empty>Araç bulunamadı</Combobox.Empty>
+              </Combobox.Dropdown>
+            </Combobox>
 
             <Group grow>
               <NumberInput
                 required
                 label="Tutar"
+                value={formData.amount}
+                onChange={(value) => setFormData(prev => ({ ...prev, amount: value }))}
                 min={0}
-                {...form.getInputProps('amount')}
+                precision={2}
               />
               <DateInput
                 required
                 label="Tarih"
-                valueFormat="DD.MM.YYYY"
-                {...form.getInputProps('expense_date')}
+                value={formData.expense_date}
+                onChange={(value) => setFormData(prev => ({ ...prev, expense_date: value }))}
+                maxDate={new Date()}
               />
             </Group>
 
             <TextInput
               required
               label="Açıklama"
-              {...form.getInputProps('description')}
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
             />
 
             {activeTab === 'maintenance' && (
